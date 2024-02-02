@@ -1,0 +1,16 @@
+#
+# Zinitix Touchscreen driver configuration
+#
+
+config TOUCHSCREEN_ZINITIX_ZTM730
+        tristate "Zinitix ZTM730 touchscreen"
+        depends on I2C
+        help
+         Say Y here if you want support for ZINITIX_ZTM730 touchscreen controllers.
+         To compile this driver as a module, choose M here: the
+         module will be called ZXT_ZTM730.
+
+config INPUT_TOUCHSCREEN_BEZEL
+        tristate "bezel wheel"
+        help
+         Say Y here if you want use touchscreen bezel wheel controllers.

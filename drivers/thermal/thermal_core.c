@@ -18,6 +18,7 @@
 #include <linux/thermal.h>
 #include <linux/reboot.h>
 #include <linux/string.h>
+#include <linux/workqueue.h>
 #include <linux/of.h>
 #include <net/netlink.h>
 #include <net/genetlink.h>
@@ -46,6 +47,14 @@ static DEFINE_MUTEX(poweroff_lock);
 
 static atomic_t in_suspend;
 static bool power_off_triggered;
+
+static struct workqueue_struct *thermal_wq;
+
+static void start_poll_queue(struct thermal_zone_device *tz, int delay)
+{
+	mod_delayed_work(thermal_wq, &tz->poll_queue,
+			msecs_to_jiffies(delay));
+}
 
 static struct thermal_governor *def_governor;
 
@@ -290,11 +299,10 @@ static void thermal_zone_device_set_polling(struct thermal_zone_device *tz,
 					    int delay)
 {
 	if (delay > 1000)
-		mod_delayed_work(system_freezable_wq, &tz->poll_queue,
-				 round_jiffies(msecs_to_jiffies(delay)));
+		start_poll_queue(tz, delay);
+
 	else if (delay)
-		mod_delayed_work(system_freezable_wq, &tz->poll_queue,
-				 msecs_to_jiffies(delay));
+		start_poll_queue(tz, delay);
 	else
 		cancel_delayed_work(&tz->poll_queue);
 }
@@ -424,23 +432,6 @@ static void handle_thermal_trip(struct thermal_zone_device *tz, int trip)
 	monitor_thermal_zone(tz);
 }
 
-static void store_temperature(struct thermal_zone_device *tz, int temp)
-{
-	mutex_lock(&tz->lock);
-	tz->last_temperature = tz->temperature;
-	tz->temperature = temp;
-	mutex_unlock(&tz->lock);
-
-	trace_thermal_temperature(tz);
-	if (tz->last_temperature == THERMAL_TEMP_INVALID ||
-		tz->last_temperature == THERMAL_TEMP_INVALID_LOW)
-		dev_dbg(&tz->device, "last_temperature N/A, current_temperature=%d\n",
-			tz->temperature);
-	else
-		dev_dbg(&tz->device, "last_temperature=%d, current_temperature=%d\n",
-			tz->last_temperature, tz->temperature);
-}
-
 static void update_temperature(struct thermal_zone_device *tz)
 {
 	int temp, ret;
@@ -453,7 +444,19 @@ static void update_temperature(struct thermal_zone_device *tz)
 				 ret);
 		return;
 	}
-	store_temperature(tz, temp);
+
+	mutex_lock(&tz->lock);
+	tz->last_temperature = tz->temperature;
+	tz->temperature = temp;
+	mutex_unlock(&tz->lock);
+
+	trace_thermal_temperature(tz);
+	if (tz->last_temperature == THERMAL_TEMP_INVALID)
+		dev_dbg(&tz->device, "last_temperature N/A, current_temperature=%d\n",
+			tz->temperature);
+	else
+		dev_dbg(&tz->device, "last_temperature=%d, current_temperature=%d\n",
+			tz->last_temperature, tz->temperature);
 }
 
 static void thermal_zone_device_init(struct thermal_zone_device *tz)
@@ -470,51 +473,35 @@ static void thermal_zone_device_reset(struct thermal_zone_device *tz)
 	thermal_zone_device_init(tz);
 }
 
-void thermal_zone_device_update_temp(struct thermal_zone_device *tz,
-				enum thermal_notify_event event, int temp)
-{
-	int count;
-
-	if (!tz || !tz->ops)
-		return;
-
-	if (atomic_read(&in_suspend) && (!tz->ops->is_wakeable ||
-					 !(tz->ops->is_wakeable(tz))))
-		return;
-
-	store_temperature(tz, temp);
-
-	thermal_zone_set_trips(tz);
-
-	tz->notify_event = event;
-
-	for (count = 0; count < tz->trips; count++)
-		handle_thermal_trip(tz, count);
-}
-
 void thermal_zone_device_update(struct thermal_zone_device *tz,
 				enum thermal_notify_event event)
 {
 	int count;
+	enum thermal_device_mode mode;
 
-	if (!tz || !tz->ops)
+	if (atomic_read(&in_suspend))
 		return;
 
-	if (atomic_read(&in_suspend) && (!tz->ops->is_wakeable ||
-		!(tz->ops->is_wakeable(tz))))
+	if (!tz->ops->get_temp || !tz->ops->get_mode)
 		return;
 
-	if (!tz->ops->get_temp)
-		return;
+	tz->ops->get_mode(tz, &mode);
 
-	update_temperature(tz);
+	if (mode == THERMAL_DEVICE_ENABLED) {
+		update_temperature(tz);
 
-	thermal_zone_set_trips(tz);
+		thermal_zone_set_trips(tz);
 
-	tz->notify_event = event;
+		tz->notify_event = event;
 
-	for (count = 0; count < tz->trips; count++)
-		handle_thermal_trip(tz, count);
+		for (count = 0; count < tz->trips; count++)
+			handle_thermal_trip(tz, count);
+
+		if (event != THERMAL_DEVICE_POWER_CAPABILITY_CHANGED) {
+			if (tz->ops->throttle_hotplug && tz->cdev_bound)
+				tz->ops->throttle_hotplug(tz);
+		}
+	}
 }
 EXPORT_SYMBOL_GPL(thermal_zone_device_update);
 
@@ -767,9 +754,8 @@ int thermal_zone_bind_cooling_device(struct thermal_zone_device *tz,
 	sprintf(dev->attr_name, "cdev%d_trip_point", dev->id);
 	sysfs_attr_init(&dev->attr.attr);
 	dev->attr.attr.name = dev->attr_name;
-	dev->attr.attr.mode = 0644;
+	dev->attr.attr.mode = 0444;
 	dev->attr.show = trip_point_show;
-	dev->attr.store = trip_point_store;
 	result = device_create_file(&tz->device, &dev->attr);
 	if (result)
 		goto remove_symbol_link;
@@ -973,7 +959,7 @@ static void bind_cdev(struct thermal_cooling_device *cdev)
  */
 static struct thermal_cooling_device *
 __thermal_cooling_device_register(struct device_node *np,
-				  const char *type, void *devdata,
+				  char *type, void *devdata,
 				  const struct thermal_cooling_device_ops *ops)
 {
 	struct thermal_cooling_device *cdev;
@@ -1025,9 +1011,11 @@ __thermal_cooling_device_register(struct device_node *np,
 
 	mutex_lock(&thermal_list_lock);
 	list_for_each_entry(pos, &thermal_tz_list, node)
-		if (atomic_cmpxchg(&pos->need_update, 1, 0))
+		if (atomic_cmpxchg(&pos->need_update, 1, 0)) {
+			pos->cdev_bound = true;
 			thermal_zone_device_update(pos,
 						   THERMAL_EVENT_UNSPECIFIED);
+		}
 	mutex_unlock(&thermal_list_lock);
 
 	return cdev;
@@ -1047,7 +1035,7 @@ __thermal_cooling_device_register(struct device_node *np,
  * ERR_PTR. Caller must check return value with IS_ERR*() helpers.
  */
 struct thermal_cooling_device *
-thermal_cooling_device_register(const char *type, void *devdata,
+thermal_cooling_device_register(char *type, void *devdata,
 				const struct thermal_cooling_device_ops *ops)
 {
 	return __thermal_cooling_device_register(NULL, type, devdata, ops);
@@ -1071,7 +1059,7 @@ EXPORT_SYMBOL_GPL(thermal_cooling_device_register);
  */
 struct thermal_cooling_device *
 thermal_of_cooling_device_register(struct device_node *np,
-				   const char *type, void *devdata,
+				   char *type, void *devdata,
 				   const struct thermal_cooling_device_ops *ops)
 {
 	return __thermal_cooling_device_register(np, type, devdata, ops);
@@ -1381,7 +1369,7 @@ void thermal_zone_device_unregister(struct thermal_zone_device *tz)
 
 	mutex_unlock(&thermal_list_lock);
 
-	cancel_delayed_work_sync(&tz->poll_queue);
+	thermal_zone_device_set_polling(tz, 0);
 
 	thermal_set_governor(tz, NULL);
 
@@ -1431,42 +1419,37 @@ exit:
 }
 EXPORT_SYMBOL_GPL(thermal_zone_get_zone_by_name);
 
-/**
- * thermal_zone_get_cdev_by_name() - search for a cooling device and returns
- * its ref.
- * @name: thermal cdev name to fetch the temperature
- *
- * When only one cdev is found with the passed name, returns a reference to it.
- *
- * Return: On success returns a reference to an unique thermal cooling device
- * with matching name equals to @name, an ERR_PTR otherwise (-EINVAL for
- * invalid paramenters, -ENODEV for not found and -EEXIST for multiple matches).
- */
-struct thermal_cooling_device *thermal_zone_get_cdev_by_name(const char *name)
+struct thermal_zone_device *
+thermal_zone_get_zone_by_cool_np(struct device_node *cool_np)
 {
-	struct thermal_cooling_device *pos = NULL, *ref = ERR_PTR(-EINVAL);
-	unsigned int found = 0;
+	struct thermal_zone_device *pos = NULL, *ref = ERR_PTR(-EINVAL);
+	unsigned int i;
 
-	if (!name)
-		return ref;
+	if (!cool_np)
+		goto exit;
 
 	mutex_lock(&thermal_list_lock);
-	list_for_each_entry(pos, &thermal_cdev_list, node)
-		if (!strncasecmp(name, pos->type, THERMAL_NAME_LENGTH)) {
-			found++;
-			ref = pos;
+	list_for_each_entry(pos, &thermal_tz_list, node) {
+		struct __thermal_zone *data = pos->devdata;
+
+		for (i = 0; i < data->num_tbps; i++) {
+			struct __thermal_bind_params *tbp = data->tbps + i;
+			if (tbp->cooling_device == cool_np) {
+				ref = pos;
+				mutex_unlock(&thermal_list_lock);
+				goto exit;
+			}
 		}
+	}
 	mutex_unlock(&thermal_list_lock);
 
 	/* nothing has been found, thus an error code for it */
-	if (found == 0)
-		return ERR_PTR(-ENODEV);
-	if (found > 1)
-		return ERR_PTR(-EEXIST);
+	ref = ERR_PTR(-ENODEV);
+exit:
 	return ref;
 
 }
-EXPORT_SYMBOL_GPL(thermal_zone_get_cdev_by_name);
+EXPORT_SYMBOL_GPL(thermal_zone_get_zone_by_cool_np);
 
 #ifdef CONFIG_NET
 static const struct genl_multicast_group thermal_event_mcgrps[] = {
@@ -1575,9 +1558,6 @@ static int thermal_pm_notify(struct notifier_block *nb,
 	case PM_POST_SUSPEND:
 		atomic_set(&in_suspend, 0);
 		list_for_each_entry(tz, &thermal_tz_list, node) {
-			if (tz->ops && tz->ops->is_wakeable &&
-			    tz->ops->is_wakeable(tz))
-				continue;
 			thermal_zone_device_init(tz);
 			thermal_zone_device_update(tz,
 						   THERMAL_EVENT_UNSPECIFIED);
@@ -1596,8 +1576,19 @@ static struct notifier_block thermal_pm_nb = {
 static int __init thermal_init(void)
 {
 	int result;
+	struct workqueue_attrs attr;
+
+	attr.nice = -20;
+	attr.no_numa = true;
+	cpumask_copy(attr.cpumask, cpu_coregroup_mask(0));
+
+	thermal_wq = alloc_workqueue("%s", WQ_HIGHPRI | WQ_UNBOUND |\
+			WQ_MEM_RECLAIM | WQ_FREEZABLE,
+			0, "thermal_check");
+	apply_workqueue_attrs(thermal_wq, &attr);
 
 	mutex_init(&poweroff_lock);
+
 	result = thermal_register_governors();
 	if (result)
 		goto error;

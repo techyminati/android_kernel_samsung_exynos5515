@@ -1,0 +1,36 @@
+config SB_CORE
+	tristate "sb-core"
+	default n
+	help
+	  Say Y here to enable.
+	  support for sec battery core API.
+	  (module: pq/notify/sysfs/vote)
+	  refer to API headers.
+
+config SB_PQUEUE
+	bool "sb-pqueue"
+	default n
+	help
+	  Say Y here to enable.
+	  support for priority queue.
+	  (api: push/pop/remove)
+	  If you use the data type,
+	  you should set the compare function.
+	  refer to sb_pqueue.h
+
+config SB_NOTIFY
+	bool "sb-notify"
+	default n
+	help
+	  Say Y here to enable.
+	  support for notifier.
+	  (type: probe/exit/external/others event)
+	  refer to sb_notify.h
+
+config SB_MISC
+	bool "sb-misc"
+	default n
+	help
+	  Say Y here to enable.
+	  support for miscdevice(ioctl).
+	  (api: read/write)

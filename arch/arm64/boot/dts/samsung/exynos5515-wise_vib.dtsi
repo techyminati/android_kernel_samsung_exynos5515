@@ -1,0 +1,59 @@
+/*
+ * SAMSUNG EXYNOS9110 board device tree source
+ *
+ * Copyright (c) 2017 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+&pinctrl_4 {
+	motor_en: motor_en {
+		samsung,pins = "gpg1-1";
+		samsung,pin-function = <0>;
+		samsung,pin-pud = <1>;
+		samsung,pin-drv = <0>;
+		samsung,pin-con-pdn = <2>;
+		samsung,pin-pud-pdn = <1>;
+	};
+};
+
+&hsi2c0_bus {
+	samsung,pin-con-pdn = <2>;
+	samsung,pin-pud-pdn = <3>;
+};
+
+&hsi2c_0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <400000>;
+
+	ist207w_motor@0C{
+		compatible = "ist207w_motor";
+		reg = <0x0C>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&motor_en>;
+		ist207w_motor,motor-type = "LRA"; /* LRA or ERM */
+		ist207w_motor,loop-type = "open"; /* closed or open */
+		ist207w_motor,regs-init = <	0x30 0x70 0x31 0x5b
+						0x32 0x54 0x33 0x50
+						0x34 0x48 0x35 0x40
+						0x36 0x30 0x37 0x20
+						0x38 0x18 0x39 0x10
+						0x3a 0x70 0x3b 0x5b
+						0x3c 0x54 0x3d 0x50
+						0x3e 0x48 0x3f 0x40
+						0x40 0x30 0x41 0x20
+						0x42 0x18 0x43 0x10>;
+		ist207w_motor,regulator-name = "vdd_ldo20";
+		ist207w_motor,adc-sampling-time = <0x86>;
+		ist207w_motor,soft-en-delay-ms = <0>;
+		ist207w_motor,strength = <0x60>;
+		ist207w_motor,fifo_strength = <0x80>;
+		ist207w_motor,frequency = <1700>;
+		samsung,vib_type = "LINEAR_WATCH";
+	};
+};

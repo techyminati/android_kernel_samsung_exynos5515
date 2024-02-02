@@ -3,12 +3,29 @@
 # kbuild file for firmware/
 #
 
+CONFIG_EXTRA_FIRMWARE_DIR="firmware"
+
 # Create $(fwabs) from $(CONFIG_EXTRA_FIRMWARE_DIR) -- if it doesn't have a
 # leading /, it's relative to $(srctree).
 fwdir := $(subst $(quote),,$(CONFIG_EXTRA_FIRMWARE_DIR))
 fwabs := $(addprefix $(srctree)/,$(filter-out /%,$(fwdir)))$(filter /%,$(fwdir))
 
 fw-external-y := $(subst $(quote),,$(CONFIG_EXTRA_FIRMWARE))
+
+fw-external-$(CONFIG_TOUCHSCREEN_ZXT_ZTM620) += tsp_zinitix/ZTM630_TEST_0B0003_201127.mng.bin
+fw-external-$(CONFIG_SOC_EXYNOS9110) += exynos9110_acpm_fvp.fw
+fw-external-$(CONFIG_SOC_EXYNOS9110) += exynos9110_acpm_tmu.fw
+fw-external-$(CONFIG_TOUCHSCREEN_ZINITIX_ZTM620) += tsp_zinitix/ztm620_merlot.fw
+fw-external-$(CONFIG_TOUCHSCREEN_ZINITIX_ZTM630) += tsp_zinitix/ztm630_watch3_large.bin
+fw-external-$(CONFIG_TOUCHSCREEN_ZINITIX_ZTM730) += tsp_zinitix/ztm730_projectx.bin
+fw-external-$(CONFIG_TOUCHSCREEN_HIDEEP_IST207W) += tsp_hideep/ist207wq_wise_large.bin tsp_hideep/ist207wq_wise_small.bin \
+							tsp_hideep/ist207wq_fresh_large.bin tsp_hideep/ist207wq_fresh_small.bin \
+							tsp_hideep/ist207wq_wise_large_boe.bin tsp_hideep/ist207wq_fresh_large_boe.bin \
+							tsp_hideep/ist207wq_wise_small_boe.bin tsp_hideep/ist207wq_fresh_small_boe.bin\
+							tsp_hideep/ist207wq_heart_large.bin tsp_hideep/ist207wq_heart_large_boe.bin \
+							tsp_hideep/ist207wq_heart_small.bin \
+							tsp_hideep/ist207wq_projectx_large.bin
+
 
 quiet_cmd_fwbin = MK_FW   $@
       cmd_fwbin = FWNAME="$(patsubst firmware/%.gen.S,%,$@)";		     \
@@ -42,8 +59,7 @@ wordsize_deps := $(wildcard include/config/64bit.h include/config/32bit.h \
 		include/config/x86_32.h include/config/x86_64.h \
 		firmware/Makefile)
 
-$(patsubst %,$(obj)/%.gen.S, $(fw-external-y)): %: $(wordsize_deps) \
-		include/config/extra/firmware/dir.h
+$(patsubst %,$(obj)/%.gen.S, $(fw-external-y)): %: $(wordsize_deps)
 	$(call cmd,fwbin,$(fwabs)/$(patsubst $(obj)/%.gen.S,%,$@))
 
 # The .o files depend on the binaries directly; the .S files don't.

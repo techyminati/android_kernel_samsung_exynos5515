@@ -528,6 +528,12 @@ config UID_SYS_STATS_DEBUG
 	help
 	  Per TASK based io statistics exported to /proc/uid_io
 
+config KNOX_GEARPAY
+	bool "Gear Samsung Pay KNOX protection"
+	default n
+	help
+	  This enables KNOX protection for Samsung Pay on Gear/Watch
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -542,4 +548,7 @@ source "drivers/misc/echo/Kconfig"
 source "drivers/misc/cxl/Kconfig"
 source "drivers/misc/ocxl/Kconfig"
 source "drivers/misc/cardreader/Kconfig"
+source "drivers/misc/uart_sel/Kconfig"
+source "drivers/misc/tzdev/Kconfig"
+source "drivers/misc/samsung/Kconfig"
 endmenu

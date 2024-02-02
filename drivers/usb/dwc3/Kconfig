@@ -20,9 +20,10 @@ config USB_DWC3_ULPI
 
 choice
 	bool "DWC3 Mode Selection"
-	default USB_DWC3_DUAL_ROLE if (USB && USB_GADGET)
-	default USB_DWC3_HOST if (USB && !USB_GADGET)
-	default USB_DWC3_GADGET if (!USB && USB_GADGET)
+	#default USB_DWC3_DUAL_ROLE if (USB && USB_GADGET)
+	#default USB_DWC3_HOST if (USB && !USB_GADGET)
+	#default USB_DWC3_GADGET if (!USB && USB_GADGET)
+	default USB_DWC3_GADGET
 
 config USB_DWC3_HOST
 	bool "Host only mode"
@@ -66,6 +67,7 @@ config USB_DWC3_EXYNOS
 	tristate "Samsung Exynos Platform"
 	depends on (ARCH_EXYNOS || COMPILE_TEST) && OF
 	default USB_DWC3
+	select TYPEC
 	help
 	  Recent Exynos5 SoCs ship with one DesignWare Core USB3 IP inside,
 	  say 'Y' or 'M' if you have one such device.
@@ -124,5 +126,10 @@ config USB_DWC3_QCOM
 	  This driver also handles Qscratch wrapper which is needed
 	  for peripheral mode support.
 	  Say 'Y' or 'M' if you have one such device.
+
+config USB_DWC3_DEFAULT_FULL_SPEED
+	bool "Set the default speed to full-speed"
+	help
+	  If you need to set the default USB speed due to RF interference, say Y.
 
 endif

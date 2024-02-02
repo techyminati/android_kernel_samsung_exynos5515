@@ -1,0 +1,76 @@
+/*
+ * SAMSUNG EXYNOS5515 Argos Device Tree Source
+ *
+ * Copyright (c) 2021 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/ {
+	compatible = "samsung,exynos5515", "samsung,s5e5515";
+
+	fragment@common {
+		target-path = "/";
+		__overlay__ {
+			#address-cells = <2>;
+			#size-cells = <1>;
+
+			argos {
+				compatible = "samsung,argos";
+				#address-cells = <1>;
+				/*  The device number should be assigned for each device, e.g. "boot_device@1" and "boot_device@2".
+				 * Duplicated number is not allowed. Please refer the below example.
+				 *  (UNAVAILABLE) : this chipset does not support the specific feature.
+				 */
+
+				/* net_bootst,interval : device throughput scan interval
+				 *          0 - 1000 ms(default), 1 - 500 ms, 2 - 250 ms
+				 * net_bootst,slowdown : fast up, slow down(apply 1-step lower threshold).
+				 */
+
+				/* net_bootst,table Format
+				 * threshold : throughput threshold(Mbps)
+				 * big_min(UNAVAILABLE) : Big Core's minimum frequency lock. 0 means not set,
+				 * big_max(UNAVAILABLE) : Big Core's maximum frequency lock. 0 means not set,
+				 * mid_min(UNAVAILABLE) : Middle Core's minimum frequency lock. 0 means not set,
+				 * mid_max(UNAVAILABLE) : Middle Core's maximum frequency lock. 0 means not set,
+				 * lit_min : Little Core's minimum frequency lock. 0 means not set,
+				 * lit_max : Little Core's maximum frequency lock. 0 means not set,
+				 * mif : MIF frequency lock. 0 means not set,
+				 * int : INT frequency lock. 0 means not set,
+				 * task_affinity : "enable" - Set task affinity lock.
+				 *	           "disable" - Not set or unlock,
+				 *		   Task affinity should be predefined driver's code.
+				 * irq_affinity : "enable" - Set irq affinity lock.
+				 *                "disable" - Not set or unlock,
+				 *		  IRQ affinity should be predefined driver's code.
+				 * hmp_boot(UNAVAILABLE) : "enable" - Increase hmp boosting count
+				 *            "disable" - Decrease hmp boosting count
+				 */
+
+				boot_device@1 {
+					net_boost,label="WIFI TX";
+					net_boost,node="wlan0";
+					net_boost,slowdown;
+					net_boost,table {
+						level_0 {
+							threshold = <20>; /* Mbps */
+							lit_min = <800000>;
+							mif = <676000>;
+							int = <334000>;
+						};
+						level_1 {
+							threshold = <40>; /* Mbps */
+							lit_min = <1200000>;
+							mif = <1014000>;
+							int = <334000>;
+						};
+					};
+				};
+			};
+		}; /* end of __overlay__ */
+	}; /* end of fragment */
+}; /* end of root */

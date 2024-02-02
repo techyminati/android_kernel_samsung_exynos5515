@@ -1,0 +1,14 @@
+# drivers/staging/lpd/Kconfig
+#
+# Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
+#		http://www.samsung.com/
+#
+# Licensed under GPLv2
+
+config MCD_LPD_V2
+	tristate "MX Low Power Display V2"
+	depends on EXYNOS_LPD
+	default N
+	help
+	  Enable support for MX Low Power Display mode V2.
+

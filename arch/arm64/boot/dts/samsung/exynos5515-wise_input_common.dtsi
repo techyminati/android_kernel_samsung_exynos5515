@@ -1,0 +1,109 @@
+/*
+ * SAMSUNG EXYNOS5515 input device tree source
+ *
+ * Copyright (c) 2021 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+/ {
+
+	fragment@common {
+		target-path = "/";
+		__overlay__ {
+			gpio_keys {
+				status = "okay";
+				compatible = "gpio-keys";
+				pinctrl-names = "default";
+				pinctrl-0 = <&key_second>;
+
+				button@1 {
+					label = "gpio-keys: KEY_APPSELECT";
+					linux,code = <580>;
+					gpios = <&gpa1 0 0xf>;
+					gpio-key,wakeup = <1>;
+				};
+			};
+		}; /* end of __overlay__ */
+	}; /* end of fragment */
+}; /* end of root */
+
+&pinctrl_0 {
+	key_second: key-second {
+		samsung,pins = "gpa1-0";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <0>;
+	};
+};
+
+&pinctrl_0 {
+	tsp_int: tsp-int {
+		samsung,pins = "gpa0-1";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <0>; /* NP */
+		samsung,pin-drv = <0>; /* 1x */
+		samsung,pin-con-pdn = <3>; /* Previous State */
+		samsung,pin-pud-pdn = <0>; /* NP */
+	};
+};
+
+&pinctrl_4 {
+	tsp_reset: tsp-reset {
+		samsung,pins = "gpg4-0";
+		samsung,pin-function = <0x1>; /* OUT */
+		samsung,pin-pud = <0>; /* NP */
+		samsung,pin-drv = <0>; /* 1x */
+		samsung,pin-con-pdn = <1>; /* OUT */
+		samsung,pin-pud-pdn = <0>; /* NP */
+	};
+};
+
+&hsi2c3_bus {
+	samsung,pins = "gpp3-0", "gpp3-1";
+	samsung,pin-function = <2>;
+	samsung,pin-pud = <3>;
+	samsung,pin-drv = <0>;
+	samsung,pin-con-pdn = <2>; /* Input */
+	samsung,pin-pud-pdn = <3>; /* NP */
+};
+
+&hsi2c_3 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	clock-frequency = <400000>;
+	tsp_zxt: zxt_tsp@20 {
+		status = "disabled";
+		compatible = "Zinitix,ztm620_ts";
+		reg = <0x20>; /*i2c slave address*/
+		pinctrl-names = "wakeup", "off";
+		pinctrl-0 = <&tsp_reset &tsp_int>;
+		pinctrl-1 = <&tsp_reset &tsp_int>;
+		zinitix,irq-gpio = <&gpa0 1 0xf>;
+		zinitix,reset-gpio = <&gpg4 0 0>;
+		zinitix,x_resolution = <360>;
+		zinitix,y_resolution = <360>;
+		zinitix,fw_name = "ztm630_watch3_large.bin";
+		avdd_regulator = "tsp_avdd_ldo";
+	};
+
+	tsp_hideep: hideep@6c {
+		status = "okay";
+		compatible = "hideep,hideep_ts";
+		reg = <0x6c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&tsp_int &tsp_reset>;  
+		tsp_avdd_ldo-supply = <&ldo25_reg>;
+		hideep,irq_gpio = <&gpa0 1 0xf>;
+		hideep,reset_gpio = <&gpg4 0 0>;
+		hideep,max_coords = <360 360 255 65535>;
+		hideep,interrupt_mode = "low-level";
+		support_ldo_control;
+		support_reset_control;
+		sec,regulator_boot_on;
+	};
+};

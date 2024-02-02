@@ -19,6 +19,9 @@ static inline int printk_get_level(const char *buffer)
 	if (buffer[0] == KERN_SOH_ASCII && buffer[1]) {
 		switch (buffer[1]) {
 		case '0' ... '7':
+#ifdef CONFIG_SEC_DEBUG_AUTO_COMMENT
+		case 'B' ... 'J':
+#endif
 		case 'd':	/* KERN_DEFAULT */
 		case 'c':	/* KERN_CONT */
 			return buffer[1];
@@ -317,6 +320,34 @@ extern int kptr_restrict;
 #define pr_cont(fmt, ...) \
 	printk(KERN_CONT fmt, ##__VA_ARGS__)
 
+#ifdef CONFIG_SEC_DEBUG_AUTO_COMMENT
+
+#define pr_auto(index, fmt, ...) \
+	printk(KERN_AUTO index pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_auto_disable(index) \
+	secdbg_comm_log_disable(index)
+#define pr_auto_once(index) \
+	secdbg_comm_log_once(index)
+
+#define ASL1	KERN_AUTO1
+#define ASL2	KERN_AUTO2
+#define ASL3	KERN_AUTO3
+#define ASL4	KERN_AUTO4
+#define ASL5	KERN_AUTO5
+#define ASL6	KERN_AUTO6
+#define ASL7	KERN_AUTO7
+#define ASL8	KERN_AUTO8
+#define ASL9	KERN_AUTO9
+
+#else
+/* TODO : retain the original log level */
+#define pr_auto(level, fmt, ...) \
+	printk(KERN_EMERG pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_auto_disable(index) do { } while (0)
+#define pr_auto_once(index) do { } while (0)
+
+#endif
+
 /* pr_devel() should produce zero code unless DEBUG is defined */
 #ifdef DEBUG
 #define pr_devel(fmt, ...) \
@@ -526,4 +557,6 @@ static inline void print_hex_dump_debug(const char *prefix_str, int prefix_type,
 }
 #endif
 
+typedef void (*hook_func_t)(const char *buf, size_t size, unsigned int id);
+extern void register_hook_logbuf(hook_func_t func);
 #endif

@@ -1,0 +1,19 @@
+config EXYNOS_GNSS_IF
+	bool "Exynos GNSS interface driver"
+	default n
+	---help---
+	  Exynos GNSS interface driver
+
+if EXYNOS_GNSS_IF
+
+menu "Configuration Description"
+config GNSS_ACTIVE_WA
+	bool "GNSS ACTIVE WA"
+	default n
+	help
+	   This feature let GNSS driver to disable wakeup source (GNSS_ACTIVE)
+	   from gnss, since its hardware init value continuously wakes up PMU
+	   This wakeup source is enabled when GPSD finishes booting gnss firmware,
+	   which will reset GNSS_ACTIVE from 0 to 1.
+endmenu
+endif

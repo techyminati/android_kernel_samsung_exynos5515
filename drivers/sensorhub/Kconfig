@@ -1,0 +1,31 @@
+menu "Sensor HUB Drivers"
+
+#
+# sensor drivers configuration
+#
+config SENSORS_SSP_WISE
+	bool "Watch 4"
+	default N
+	help
+	  Include Watch4 firmware
+
+config SENSORS_SSP_FRESH
+	bool "Active 4"
+	default N
+	help
+	  Include Active4 firmware
+
+config SENSORS_SSP_HEART
+	bool "Watch 5"
+	default N
+	help
+	  Include Watch5 firmware
+
+config CONTEXTHUB_DRV
+	tristate "chub driver"
+	default n
+	help
+	  chub driver
+
+source "drivers/sensorhub/slsi/Kconfig"
+endmenu

@@ -349,5 +349,10 @@ config QORIQ_CPUFREQ
 	  This adds the CPUFreq driver support for Freescale QorIQ SoCs
 	  which are capable of changing the CPU's frequency dynamically.
 
+config PMQOS_BOOST
+	bool "cpufreq boost with PM_QOS"
+	default n
+	help
+	  SEC cpu freq minlock boosting on kernel
 endif
 endmenu

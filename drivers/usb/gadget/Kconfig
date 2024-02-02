@@ -134,6 +134,13 @@ config U_SERIAL_CONSOLE
 	help
 	   It supports the serial gadget can be used as a console.
 
+config USB_OLD_CONFIGFS
+	bool "Old style configfs"
+	depends on USB_CONFIGFS
+	default n
+	help
+	   It supports old style configfs
+
 source "drivers/usb/gadget/udc/Kconfig"
 
 #
@@ -215,10 +222,16 @@ config USB_F_PRINTER
 config USB_F_TCM
 	tristate
 
-config USB_F_ACC
+config USB_F_MTP
+	tristate
+
+config USB_F_PTP
 	tristate
 
 config USB_F_AUDIO_SRC
+	tristate
+
+config USB_F_ACC
 	tristate
 
 # this first set of drivers all depend on bulk-capable hardware.
@@ -382,6 +395,34 @@ config USB_CONFIGFS_F_FS
 	  implemented in kernel space (for instance Ethernet, serial or
 	  mass storage) and other are implemented in user space.
 
+config USB_CONFIGFS_F_DM
+	bool "DM gadget"
+	depends on USB_CONFIGFS
+	select USB_F_DM
+	help
+	  USB gadget DM(Diagnosis Monitor) support
+
+config USB_CONFIGFS_F_ADB
+	bool "ADB gadget"
+	depends on USB_CONFIGFS
+	select USB_F_ADB
+	help
+	  USB gadget ADB support
+
+config USB_CONFIGFS_F_MTP
+	bool "MTP gadget"
+	depends on USB_CONFIGFS
+	select USB_F_MTP
+	help
+	  USB gadget MTP support
+
+config USB_CONFIGFS_F_PTP
+	bool "PTP gadget"
+	depends on USB_CONFIGFS && USB_CONFIGFS_F_MTP
+	select USB_F_PTP
+	help
+	  USB gadget PTP support
+
 config USB_CONFIGFS_F_ACC
 	bool "Accessory gadget"
 	depends on USB_CONFIGFS
@@ -398,6 +439,12 @@ config USB_CONFIGFS_F_AUDIO_SRC
 	select USB_F_AUDIO_SRC
 	help
 	  USB gadget Audio Source support
+
+config USB_RNDIS_MULTIPACKET
+	bool "Samsung Rndis Multi Packet support"
+	depends on USB_CONFIGFS_UEVENT
+	help
+	Rndis Multipacket Support.
 
 config USB_CONFIGFS_F_UAC1
 	bool "Audio Class 1.0"

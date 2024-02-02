@@ -181,7 +181,7 @@ void panic(const char *fmt, ...)
 	va_end(args);
 	if (vendor_panic_cb)
 		vendor_panic_cb(0);
-	pr_emerg("Kernel panic - not syncing: %s\n", buf);
+	pr_auto(ASL5, "Kernel panic - not syncing: %s\n", buf);
 #ifdef CONFIG_DEBUG_BUGVERBOSE
 	/*
 	 * Avoid nested stack-dumping if a panic occurs during oops processing

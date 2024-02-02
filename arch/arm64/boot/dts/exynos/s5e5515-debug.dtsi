@@ -1,0 +1,115 @@
+/*
+ * copyright (c) 2019 samsung electronics co., ltd.
+ *		http://www.samsung.com
+ *
+ * this program is free software; you can redistribute it and/or modify
+ * it under the terms of the gnu general public license version 2 as
+ * published by the free software foundation.
+ */
+
+#include <dt-bindings/soc/samsung/debug-snapshot-def.h>
+#include <dt-bindings/interrupt-controller/s5e5515.h>
+#include <dt-bindings/input/linux-event-codes.h>
+
+/ {
+	dpm: dpm {
+	};
+
+	dss: dss {
+		compatible = "samsung,debug-snapshot";
+		panic_to_wdt = <0>;
+		hold-key = <KEY_APPSELECT>;
+		trigger-key = <KEY_POWER>;
+		/* devfreq engineer fill freq_names. */
+		freq_names = "LIT", "MIF", "INT", "DISP", "AUD", "G3D";
+		memory-region = <&header>, <&log_kernel>, <&log_platform>,
+				<&log_kevents>, <&log_s2d>, <&log_arrdumpreset>,
+				<&log_arrdumppanic>;
+	};
+
+	dss-qdump {
+		compatible = "debug-snapshot,qdump";
+	};
+
+	dss-sfrdump {
+		compatible = "debug-snapshot,sfrdump";
+		/* -----------<< Example >>-------------------
+		dump-info {
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			gic-setenable {
+				reg = <0x11f01100 0x100>;
+			};
+			gic-setpend {
+				reg = <0x11f01200 0x100>;
+			};
+			gic-setactive {
+				reg = <0x11f01300 0x100>;
+			};
+		};
+		*/
+	};
+
+	itmon: itmon {
+		compatible = "samsung,s5e5515-itmon";
+		interrupts = <0 INTREQ__TREX_D_CORE_debugInterrupt IRQ_TYPE_LEVEL_HIGH>, /* DATA_CORE */
+			     <0 INTREQ__TREX_P_CORE_debugInterrupt IRQ_TYPE_LEVEL_HIGH>; /* PERI_CORE */
+		err_fatal       = <GO_S2D_ID>;
+		err_drex_tmout  = <GO_S2D_ID>;
+		err_ip          = <GO_PANIC_ID>;
+		err_cpu         = <GO_DEFAULT_ID>;
+		err_cp          = <GO_DEFAULT_ID>;
+		err_chub        = <GO_DEFAULT_ID>;
+	};
+
+	exynos-debug-test {
+		compatible = "samsung,exynos-debug-test";
+		nr_cpu = <0x2>;
+		nr_little_cpu = <0x2>;
+		little_cpu_start = <0x0>;
+	};
+
+	coresight@1e000000 {
+		compatible = "samsung,exynos-coresight";
+		dbg_base = <0x16810000>, <0x16910000>;
+		cti_base = <0x16820000>, <0x16920000>;
+		pmu_base = <0x16830000>, <0x16930000>;
+		gpr_base = <0x16001000>;
+		dbgack-mask = <0x0>;
+		halt = <0>;
+		retention = <0>;
+	};
+
+	exynos-ecc-handler {
+		compatible = "samsung,exynos-ecc-handler";
+		interrupts = <GIC_SPI INTREQ__CPUCL0_ERRIRQ_0 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__CPUCL0_ERRIRQ_1 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI INTREQ__CPUCL0_ERRIRQ_2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "Uncorrectable errors Cache(L3) tag or SCU snoop filter RAMs",
+			"Core0, Uncorrectable errors in the L1 tag or L1 dirty or L2 tag RAMs",
+			"Core1, Uncorrectable errors in the L1 tag or L1 dirty or L2 tag RAMs";
+	};
+
+	hardlockup-watchdog {
+		compatible = "samsung,hardlockup-watchdog";
+	};
+
+	exynos-adv_tracer {
+		compatible = "samsung,exynos-adv-tracer";
+		reg = <0x0 0x12a50000 0x1000>;
+		reg-names = "mailbox";
+		interrupts = <GIC_SPI INTREQ__MAILBOX_DBGCORE2AP IRQ_TYPE_LEVEL_HIGH>;
+		status = "ok";
+	};
+
+	s2d: exynos_adv_tracer_s2d {
+		compatible = "samsung,exynos-adv-tracer-s2d";
+		plugin-len = <3>;
+		plugin-name = "S2D";
+		pmu-burnin-ctrl = <0xa08>;
+		sel-scanmode-bit = <25>;
+		dbgsel-sw-bit = <4>;
+		status = "ok";
+	};
+};

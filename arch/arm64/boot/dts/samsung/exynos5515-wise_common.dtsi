@@ -1,0 +1,875 @@
+/*
+ * SAMSUNG EXYNOS5515 board device tree source
+ *
+ * Copyright (c) 2017 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "s5e5515-universal5515-cp-s309ap-sipc.dtsi"
+#include <dt-bindings/interrupt-controller/s5e5515.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/s5e5515.h>
+#include "exynos_gpio_config_macros.dtsi"
+#include "exynos5515-wise_common_panel.dtsi"
+#include "exynos5515-wise_vib.dtsi"
+#include "exynos5515-wise_sensor_common.dtsi"
+#include "exynos5515-wise_abc.dtsi"
+#include "exynos5515_argos.dtsi"
+#include "exynos5515-inputbooster.dtsi"
+
+/ {
+	fragment@common {
+		target-path = "/";
+		__overlay__ {
+			#address-cells = <2>;
+			#size-cells = <1>;
+
+			firmware {
+				android {
+					compatible = "android,firmware";
+					fstab {
+						compatible = "android,fstab";
+						vendor {
+							compatible = "android,vendor";
+							dev = "/dev/block/platform/10500000.dwmmc0/by-name/vendor";
+							type = "ext4";
+							mnt_flags = "ro";
+							fsmgr_flags = "wait,avb";
+							status = "disabled";
+						};
+					};
+					vbmeta {
+						compatible = "android,vbmeta";
+						parts = "vbmeta,boot,system,vendor,product,odm,prism,optics,vbmeta_system,recovery,dtbo,keystorage";
+					};
+				};
+			};
+
+			pinctrl@12850000 {
+				bt_hostwake: bt-hostwake {
+					samsung,pins = "gpa1-2";
+					samsung,pin-function = <0xF>;
+					samsung,pin-pud = <1>;
+				};
+			};
+
+			pinctrl@10110000 {
+				bt_en: bt-en  {
+					samsung,pins = "gpg5-1";
+					samsung,pin-function = <1>;
+					samsung,pin-pud = <0>;
+					samsung,pin-con-pdn = <3>;
+					samsung,pin-pud-pdn = <0>;
+				};
+
+				bt_btwake: bt-btwake {
+					samsung,pins = "gpg2-1";
+					samsung,pin-function = <1>;
+					samsung,pin-pud = <0>;
+					samsung,pin-con-pdn = <3>;
+					samsung,pin-pud-pdn = <0>;
+				};
+			};
+
+			bluetooth {
+				compatible = "samsung,bcm43xx";
+				gpios = <&gpg5 1 0	/*BT_EN*/
+						 &gpg2 1 0x0    /*BT_WAKE*/
+						 &gpa1 2 0x0    /*BT_HOST_WAKE*/ >;
+				pinctrl-names = "default";
+				pinctrl-0 = <&bt_hostwake &bt_btwake &bt_en>;
+				status = "okay";
+			};
+
+			/* UART SWITCH FOR CP */
+			uart_sel {
+				compatible = "samsung,exynos-uart-sel";
+
+				int_ap2cp_uart_noti = <15>;
+				mbx_ap2cp_united_status = <2>;
+				sbi_uart_noti_mask = <0x1>;
+				sbi_uart_noti_pos = <16>;
+				use_usb_phy = <1>;
+			};
+
+			wlan: wlan {
+				compatible = "samsung,brcm-wlan";
+				gpios = <&gpg2 0 0x1 /* WLAN_EN */
+					 &gpa1 1 0xf /* WLAN HOST WAKE GPIO_0 */>;
+				//pinctrl-names = "default";
+				//pinctrl-0 = <&cfg_wlanen &cfg_wlanhostwake>;
+				status = "okay";
+			};
+
+			gnss_mailbox: gnss_mailbox {
+				compatible = "samsung,exynos-gnss-mailbox";
+				reg = <0x0 0x12990000 0x200>; /* MAILBOX AP2GNSS */
+				interrupt-parent = <&gic>;
+				interrupts = <GIC_SPI INTREQ__MAILBOX_GNSS2AP IRQ_TYPE_LEVEL_HIGH>;
+				mbox,name = "gnss_mailbox";
+				mbox,id = <0>;
+			};
+
+			gnssif {
+				status = "okay";
+				compatible = "samsung,exynos-gnss";
+				interrupt-parent = <&gic>;
+				interrupts = <GIC_SPI INTREQ__GNSS_WDOG_RESET IRQ_TYPE_EDGE_RISING>,
+					<GIC_SPI INTREQ__GNSS_WAKEUP_INT IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI INTREQ__GNSS_SW_INT IRQ_TYPE_EDGE_RISING>;
+				interrupt-names = "WATCHDOG", "WAKEUP", "SW_INIT";
+				shmem,name = "KEPLER";
+				device_node_name = "gnss_ipc";
+				/* Mailbox */
+				mbox_info = <&gnss_mailbox>;
+				/* ap2gnss */
+				mbx,int_bcmd = <0>;
+				mbx,int_req_fault_info = <1>;
+				mbx,int_ipc_msg = <2>;
+				mbx,int_ack_wake_set = <3>;
+				mbx,int_ack_wake_clr = <4>;
+				/* gnss2ap */
+				mbx,irq_bcmd = <0>;
+				mbx,irq_rsp_fault_info = <1>;
+				mbx,irq_ipc_msg = <2>;
+				mbx,irq_req_wake_clr = <4>;
+				mbx,irq_simple_lock = <15>;
+				mbx,reg_bcmd_ctrl = <0>, <1>, <2>, <3>;
+				/* Memory */
+				memory-region = <&gnss_rmem>;
+				reg_rx_ipc_msg = <1 5>;
+				reg_tx_ipc_msg = <1 4>;
+				reg_rx_head = <1 3>;
+				reg_rx_tail = <1 2>;
+				reg_tx_head = <1 1>;
+				reg_tx_tail = <1 0>;
+				fault_info = <1 0x200000 0x180000>;
+				shmem,gnss_code_offset = <0x00000000>;
+				shmem,gnss_code_size = <0x00000000>;
+				shmem,ipc_offset = <0x00380000>;
+				shmem,ipc_size = <0x00080000>;
+				shmem,ipc_reg_cnt = <32>;
+			};
+
+			dummy_audio_codec: audio_codec_dummy {
+				compatible = "snd-soc-dummy";
+				#sound-dai-cells = <0>;
+			};
+
+			sound {
+				status = "okay";
+				compatible = "samsung,s5e5515-madera";
+
+				samsung,routing =
+					"VTS PAD DPDM", "DMIC1",
+					"VTS Virtual Output", "VTS Virtual Output Mux",
+					"VTS Virtual Output Mux", "DMIC1",
+					"FWD SPK", "ABOX FWD Playback",
+					"ABOX FWD Capture", "FWD MIC",
+					"BLUETOOTH SPK", "ABOX UAIF1 Playback",
+					"ABOX UAIF1 Capture", "BLUETOOTH MIC";
+
+				samsung,aux = <&abox_effect &abox_tplg>;
+
+				rdma0 {
+					cpu {
+						sound-dai = <&abox_rdma_0 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_0 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma1 {
+					cpu {
+						sound-dai = <&abox_rdma_1 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_1 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma2 {
+					cpu {
+						sound-dai = <&abox_rdma_2 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_2 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma3 {
+					cpu {
+						sound-dai = <&abox_rdma_3 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_3 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma4 {
+					cpu {
+						sound-dai = <&abox_rdma_4 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_4 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma5 {
+					cpu {
+						sound-dai = <&abox_rdma_5 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_5 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma6 {
+					cpu {
+						sound-dai = <&abox_rdma_6 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_6 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma7 {
+					cpu {
+						sound-dai = <&abox_rdma_7 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_7 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma8 {
+					cpu {
+						sound-dai = <&abox_rdma_8 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_8 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma9 {
+					cpu {
+						sound-dai = <&abox_rdma_9 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_9 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma10 {
+					cpu {
+						sound-dai = <&abox_rdma_10 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_10 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma11 {
+					cpu {
+						sound-dai = <&abox_rdma_11 0>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_11 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				wdma0 {
+					cpu {
+						sound-dai = <&abox_wdma_0 0>;
+					};
+					platform {
+						sound-dai = <&abox_wdma_0 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				wdma1 {
+					cpu {
+						sound-dai = <&abox_wdma_1 0>;
+					};
+					platform {
+						sound-dai = <&abox_wdma_1 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				wdma2 {
+					cpu {
+						sound-dai = <&abox_wdma_2 0>;
+					};
+					platform {
+						sound-dai = <&abox_wdma_2 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				wdma3 {
+					cpu {
+						sound-dai = <&abox_wdma_3 0>;
+					};
+					platform {
+						sound-dai = <&abox_wdma_3 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				wdma4 {
+					cpu {
+						sound-dai = <&abox_wdma_4 0>;
+					};
+					platform {
+						sound-dai = <&abox_wdma_4 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				vts0 {
+					cpu {
+						sound-dai = <&vts 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				vts1 {
+					cpu {
+						sound-dai = <&vts 1>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				dual0 {
+					cpu {
+						sound-dai = <&abox_dual_0>;
+					};
+					platform {
+						sound-dai = <&abox_dual_0>;
+					};
+				};
+				dual1 {
+					cpu {
+						sound-dai = <&abox_dual_1>;
+					};
+					platform {
+						sound-dai = <&abox_dual_1>;
+					};
+				};
+				dual2 {
+					cpu {
+						sound-dai = <&abox_dual_2>;
+					};
+					platform {
+						sound-dai = <&abox_dual_2>;
+					};
+				};
+				dual3 {
+					cpu {
+						sound-dai = <&abox_dual_3>;
+					};
+					platform {
+						sound-dai = <&abox_dual_3>;
+					};
+				};
+				dual4 {
+					cpu {
+						sound-dai = <&abox_dual_4>;
+					};
+					platform {
+						sound-dai = <&abox_dual_4>;
+					};
+				};
+				ddma0 {
+					cpu {
+						sound-dai = <&abox_ddma_0>;
+					};
+					platform {
+						sound-dai = <&abox_ddma_0>;
+					};
+				};
+				ddma1 {
+					cpu {
+						sound-dai = <&abox_ddma_1>;
+					};
+					platform {
+						sound-dai = <&abox_ddma_1>;
+					};
+				};
+				ddma2 {
+					cpu {
+						sound-dai = <&abox_ddma_2>;
+					};
+					platform {
+						sound-dai = <&abox_ddma_2>;
+					};
+				};
+				ddma3 {
+					cpu {
+						sound-dai = <&abox_ddma_3>;
+					};
+					platform {
+						sound-dai = <&abox_ddma_3>;
+					};
+				};
+				ddma4 {
+					cpu {
+						sound-dai = <&abox_ddma_4>;
+					};
+					platform {
+						sound-dai = <&abox_ddma_4>;
+					};
+				};
+				uaif0 {
+					format = "i2s";
+					cpu {
+						sound-dai = <&abox_uaif_0>;
+					};
+					codec {
+						//sound-dai = <&dummy_audio_codec>;
+						sound-dai = <&audio_codec_aud9001x>;
+					};
+				};
+				uaif1 {
+					format = "i2s";
+					cpu {
+						sound-dai = <&abox_uaif_1>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				uaif2 {
+					format = "i2s";
+					cpu {
+						sound-dai = <&abox_uaif_2>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				spdy {
+					cpu {
+						sound-dai = <&abox_spdy>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				sifs0 {
+					cpu {
+						sound-dai = <&abox 0>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				sifs1 {
+					cpu {
+						sound-dai = <&abox 1>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				sifs2 {
+					cpu {
+						sound-dai = <&abox 2>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				sifs3 {
+					cpu {
+						sound-dai = <&abox 3>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				sifs4 {
+					cpu {
+						sound-dai = <&abox 4>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				sifs5 {
+					cpu {
+						sound-dai = <&abox 5>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				nsrc0 {
+					cpu {
+						sound-dai = <&abox 6>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				nsrc1 {
+					cpu {
+						sound-dai = <&abox 7>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				nsrc2 {
+					cpu {
+						sound-dai = <&abox 8>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				nsrc3 {
+					cpu {
+						sound-dai = <&abox 9>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				nsrc4 {
+					cpu {
+						sound-dai = <&abox 10>;
+					};
+					codec {
+						sound-dai = <&dummy_audio_codec>;
+					};
+				};
+				rdma0_be {
+					cpu {
+						sound-dai = <&abox_rdma_0 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_0 1>;
+					};
+				};
+				rdma1_be {
+					cpu {
+						sound-dai = <&abox_rdma_1 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_1 1>;
+					};
+				};
+				rdma2_be {
+					cpu {
+						sound-dai = <&abox_rdma_2 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_2 1>;
+					};
+				};
+				rdma3_be {
+					cpu {
+						sound-dai = <&abox_rdma_3 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_3 1>;
+					};
+				};
+				rdma4_be {
+					cpu {
+						sound-dai = <&abox_rdma_4 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_4 1>;
+					};
+				};
+				rdma5_be {
+					cpu {
+						sound-dai = <&abox_rdma_5 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_5 1>;
+					};
+				};
+				rdma6_be {
+					cpu {
+						sound-dai = <&abox_rdma_6 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_6 1>;
+					};
+				};
+				rdma7_be {
+					cpu {
+						sound-dai = <&abox_rdma_7 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_7 1>;
+					};
+				};
+				rdma8_be {
+					cpu {
+						sound-dai = <&abox_rdma_8 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_8 1>;
+					};
+				};
+				rdma9_be {
+					cpu {
+						sound-dai = <&abox_rdma_9 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_9 1>;
+					};
+				};
+				rdma10_be {
+					cpu {
+						sound-dai = <&abox_rdma_10 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_10 1>;
+					};
+				};
+				rdma11_be {
+					cpu {
+						sound-dai = <&abox_rdma_11 1>;
+					};
+					platform {
+						sound-dai = <&abox_rdma_11 1>;
+					};
+				};
+				wdma0_be {
+					cpu {
+						sound-dai = <&abox_wdma_0 1>;
+					};
+					platform {
+						sound-dai = <&abox_wdma_0 1>;
+					};
+				};
+				wdma1_be {
+					cpu {
+						sound-dai = <&abox_wdma_1 1>;
+					};
+					platform {
+						sound-dai = <&abox_wdma_1 1>;
+					};
+				};
+				wdma2_be {
+					cpu {
+						sound-dai = <&abox_wdma_2 1>;
+					};
+					platform {
+						sound-dai = <&abox_wdma_2 1>;
+					};
+				};
+				wdma3_be {
+					cpu {
+						sound-dai = <&abox_wdma_3 1>;
+					};
+					platform {
+						sound-dai = <&abox_wdma_3 1>;
+					};
+				};
+				wdma4_be {
+					cpu {
+						sound-dai = <&abox_wdma_4 1>;
+					};
+					platform {
+						sound-dai = <&abox_wdma_4 1>;
+					};
+				};
+				fwd {
+					cpu {
+						sound-dai = <&abox 11>;
+					};
+				};
+			};
+
+			sec-audio-debug {
+				compatible = "samsung,audio-debug";
+				status = "okay";
+			};
+
+			acpm_mfd_bus@12A60000 {
+				status = "okay";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				audio_codec_aud9001x: aud9001x@03 {
+					compatible = "codec,aud9001x";
+					#sound-dai-cells = <0>;
+					reg = <0x03>;
+					pinctrl-names = "default";
+				};
+			};
+
+			exynos_rgt {
+				compatible = "samsung,exynos-rgt";
+				num-acpm-pmic = <1>;
+//				acpm-ipc-channel = <2>;
+			};
+
+			exynos_pm_dvs {
+				compatible = "samsung,exynos-pm-dvs";
+				vdd_lldo {
+					regulator_name = "vdd_lldo";
+					suspend_volt = <1250000>;
+					//init_volt = <1350000>;
+					volt_range_step = <12500>;
+				};
+
+				vdd_mldo {
+					regulator_name = "vdd_mldo";
+					suspend_volt = <1850000>;
+					//init_volt = <2000000>;
+					volt_range_step = <12500>;
+				};
+			};
+		};
+	};
+};
+
+&chosen {
+	bootargs_ext = "root=/dev/ram0 androidboot.boot_devices=10500000.dwmmc0";
+};
+
+&serial_0 {
+	status = "okay";
+#if defined(CONFIG_SEC_FACTORY)
+	samsung,uart-logging;
+#endif
+};
+
+&serial_1 {
+	samsung,rts-trig-level = <1>;
+	samsung,rts-gpio-control;
+	/*samsung,uart-logging;*/
+	samsung,uart-panic-log;
+	status = "okay";
+};
+
+&udc {
+	status = "okay";
+	dwc3 {
+		dr_mode = "otg";
+		maximum-speed = "high-speed";
+	};
+};
+
+&usbdrd_phy {
+	status = "okay";
+
+	hs_tune_param = <&usb_hs_tune>;
+
+	usb_hs_tune:hs_tune {
+		    hs_tune_cnt = <12>;
+
+		    /* value = <device host> */
+		    hs_tune1 {
+			    tune_name = "tx_vref";
+			    tune_value = <0xf 0xf>;
+		    };
+
+		    hs_tune2 {
+			    tune_name = "tx_pre_emp";
+			    tune_value = <0x3 0x3>;
+		    };
+
+		    hs_tune3 {
+			    tune_name = "tx_pre_emp_plus";
+			    tune_value = <0x0 0x0>;
+		    };
+
+		    hs_tune4 {
+			    tune_name = "tx_res";
+			    tune_value = <0x3 0x3>;
+		    };
+
+		    hs_tune5 {
+			    tune_name = "tx_rise";
+			    tune_value = <0x3 0x3>;
+		    };
+
+		    hs_tune6 {
+			    tune_name = "tx_hsxv";
+			    tune_value = <0x3 0x3>;
+		    };
+
+		    hs_tune7 {
+			    tune_name = "tx_fsls";
+			    tune_value = <0x3 0x3>;
+		    };
+
+		    hs_tune8 {
+			    tune_name = "rx_sqrx";
+			    tune_value = <0x7 0x7>;
+		    };
+
+		    hs_tune9 {
+			    tune_name = "compdis";
+			    tune_value = <0x7 0x7>;
+		    };
+
+		    hs_tune10 {
+			    tune_name = "otg";
+			    tune_value = <0x2 0x2>;
+		    };
+
+		    hs_tune11 {
+			    /* true : 1, false: 0 */
+			    /* <enable_user_imp user_imp_value> */
+			    tune_name = "enable_user_imp";
+			    tune_value = <0x0 0x0>;
+		    };
+
+		    hs_tune12 {
+			    /* PHY clk : 1 , FREE clk : 0 */
+			    tune_name = "is_phyclock";
+			    tune_value = <0x1 0x1>;
+		    };
+	    };
+};
+
+/* mmc for Wi-Fi */
+&dwmmc_2 {
+	status = "okay";
+};

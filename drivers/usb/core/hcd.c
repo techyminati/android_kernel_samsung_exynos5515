@@ -2307,7 +2307,7 @@ int hcd_bus_suspend(struct usb_device *rhdev, pm_message_t msg)
 	int		status;
 	int		old_state = hcd->state;
 
-	dev_dbg(&rhdev->dev, "bus %ssuspend, wakeup %d\n",
+	dev_info(&rhdev->dev, "bus %ssuspend, wakeup %d\n",
 			(PMSG_IS_AUTO(msg) ? "auto-" : ""),
 			rhdev->do_remote_wakeup);
 	if (HCD_DEAD(hcd)) {
@@ -2351,6 +2351,11 @@ int hcd_bus_suspend(struct usb_device *rhdev, pm_message_t msg)
 		dev_dbg(&rhdev->dev, "bus %s fail, err %d\n",
 				"suspend", status);
 	}
+
+	/* L2 suspend only support USB2.0port */
+	if (hcd->state == HC_STATE_SUSPENDED)
+		hcd->driver->wake_lock(hcd, 0);
+
 	return status;
 }
 
@@ -2360,7 +2365,7 @@ int hcd_bus_resume(struct usb_device *rhdev, pm_message_t msg)
 	int		status;
 	int		old_state = hcd->state;
 
-	dev_dbg(&rhdev->dev, "usb %sresume\n",
+	dev_info(&rhdev->dev, "usb %sresume\n",
 			(PMSG_IS_AUTO(msg) ? "auto-" : ""));
 	if (HCD_DEAD(hcd)) {
 		dev_dbg(&rhdev->dev, "skipped %s of dead bus\n", "resume");
@@ -2385,6 +2390,9 @@ int hcd_bus_resume(struct usb_device *rhdev, pm_message_t msg)
 	if (status == 0) {
 		struct usb_device *udev;
 		int port1;
+
+		if (hcd->state == HC_STATE_RESUMING)
+			hcd->driver->wake_lock(hcd, 1);
 
 		spin_lock_irq(&hcd_root_hub_lock);
 		if (!HCD_DEAD(hcd)) {

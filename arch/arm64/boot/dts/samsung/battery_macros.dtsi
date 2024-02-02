@@ -1,0 +1,107 @@
+/*
+ * SAMSUNG EXYNOS5515 board device tree source
+ *
+ * Copyright (c) 2021 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/*
+ * sb adc
+ * struct {
+ * unsigned	total_cnt : 8,
+ *			min_max : 7,
+ *			order : 1,
+ *			no_table : 1;
+ * } flag;
+ */
+#define ORDER_ASCENDING		0
+#define ORDER_DESCENDING	1
+#define SET_ADC(cnt, mm, order, no_table) (cnt | (mm << 8) | (ORDER_ ##order << 15) | (no_table << 16))
+
+/*
+ * tx info
+ * #define sb_wrl_tx_type	unsigned long long
+ * struct sb_wrl_tx {
+ *	union {
+ *		sb_wrl_tx_type info_data;
+ *		struct {
+ *			unsigned	id : 8,
+ *						recv_id : 1,
+ *						pad_type : 4,
+ *						phm : 1,
+ *						phm_state : 1,
+ *						phm_time : 16,
+ *						auth : 1,
+ *						auth_state : 4,
+ *						fw_state : 1,
+ *						resv : 27;
+ *		} info;
+ *	};
+ *	sb_wrl_tx_type chg_mode[SB_WRL_CHG_MODE_MAX];
+ * };
+ */
+
+#define SB_WRL_PAD_TYPE_NORMAL		0
+#define SB_WRL_PAD_TYPE_D2D			1
+#define SB_WRL_PAD_TYPE_MULTI		2
+#define SB_WRL_PAD_TYPE_ILLEGAL		3
+#define SB_WRL_PAD_TYPE_FAST_MULTI	4
+
+#define SET_TX(id, type, phm, phm_time, auth, fota) \
+	(id | ((SB_WRL_PAD_TYPE_ ##type) << 9) | (phm << 13) | (phm_time << 15) | (auth << 31))	(((!fota) << 4))
+
+/* vout mode macro
+ * union sb_wrl_vm {
+ *	sb_wrl_tx_type		value;
+ *	struct {
+ *		unsigned	type : 8,
+ *					resv : 24;
+ *	} base;
+ *	struct {
+ *		unsigned	type : 8,
+ *					resv : 24,
+ *					hdr : 8,
+ *					ichg : 8,
+ *					high_vout : 16;
+ *	} dc;
+ *	struct {
+ *		unsigned	type : 8,
+ *					resv : 24,
+ *					low_vout : 16,
+ *					vbat_hdr : 8,
+ *					hdr : 8;
+ *	} bt;
+ *	struct {
+ *		unsigned	type : 8,
+ *					resv : 24,
+ *					vout : 16,
+ *					hdr : 8;
+ *	} fx;
+ * };
+ */
+
+#define SB_WRL_VM_INIT	0
+#define SB_WRL_VM_DC	1
+#define SB_WRL_VM_BT	2
+#define SB_WRL_VM_FX	3
+#define SB_WRL_VM_OFF	4
+#define SB_WRL_VM_WAKE	5
+#define SB_WRL_VM_CM	6
+#define SB_WRL_VM_APM	7
+
+#define SB_WRL_HDR_STEP		10
+#define SB_WRL_VOUT_STEP	1
+#define SB_WRL_ICHG_STEP	4
+
+#define SET_VM_DC(hdr, ichg, high_vout) \
+	(SB_WRL_VM_DC)	((hdr / SB_WRL_HDR_STEP) | ((ichg / SB_WRL_ICHG_STEP) << 8) | ((high_vout / SB_WRL_VOUT_STEP) << 16))
+
+#define SET_VM_BT(low_vout, vbat_hdr, hdr) \
+	(SB_WRL_VM_BT)	((low_vout / SB_WRL_VOUT_STEP) | ((vbat_hdr / SB_WRL_HDR_STEP) << 16) | ((hdr / SB_WRL_HDR_STEP) << 24))
+
+#define SET_VM_FX(vout, hdr) \
+	(SB_WRL_VM_FX)	((vout / SB_WRL_VOUT_STEP) | ((hdr / SB_WRL_HDR_STEP) << 16))

@@ -1,0 +1,137 @@
+config MCD_PANEL
+	tristate "Samsung MCD Panel Driver"
+	select BACKLIGHT_CLASS_DEVICE
+	default n
+	help
+		Enable MCD Panel Driver.
+
+config EXYNOS_DECON_MDNIE_LITE
+	bool "Support MDNIE LITE"
+	depends on MCD_PANEL
+	default n
+
+config SUPPORT_AFC
+	bool "Support AFC"
+	depends on MCD_PANEL && EXYNOS_DECON_MDNIE_LITE
+	default n
+
+config EXYNOS_DECON_LCD_SYSFS
+	bool "Support LCD SYSFS"
+	depends on MCD_PANEL
+	default n
+
+config DISPLAY_VRR
+	bool "Support VRR feature"
+	depends on MCD_PANEL
+	default n
+
+config EXYNOS_DECON_LCD_TUNING
+	bool "Support LCD TUNING"
+	depends on MCD_PANEL
+	default n
+
+config PANEL_AID_DIMMING
+	bool "Support AID Dimming"
+	depends on MCD_PANEL
+	default y
+	default n
+
+config SUPPORT_AOD_BL
+	bool "Support AOD(Active On Display) BL(BackLight) Driver"
+	depends on MCD_PANEL && EXYNOS_DOZE
+	default n
+
+config SUPPORT_DISPLAY_PROFILER
+	bool "Support Display Profiler"
+	depends on MCD_PANEL
+	default n
+
+config SUPPORT_DIM_FLASH
+	bool "Support display dimming flash"
+	depends on MCD_PANEL && SUPPORT_DDI_FLASH
+	default n
+
+config SUPPORT_GRAM_CHECKSUM
+	bool "Support GRAM Checksum"
+	depends on MCD_PANEL
+	default n
+
+config SUPPORT_CCD_TEST
+	bool "Support CCD TEST"
+	depends on MCD_PANEL
+	default n
+
+config SUPPORT_DYNAMIC_HLPM
+	bool "Support Dynamic HLPM TEST"
+	depends on MCD_PANEL && EXYNOS_DOZE
+	default n
+
+config PANEL_BACKLIGHT_PAC_3_0
+	bool "Support baclight PAC 3.0"
+	depends on MCD_PANEL
+	default n
+
+config DISPLAY_USE_INFO
+	bool "Support display use info logging"
+	depends on MCD_PANEL
+	default n
+
+config PANEL_NOTIFY
+	bool "Support panel notifier"
+	depends on MCD_PANEL
+	default n
+
+config SUPPORT_POC_SPI
+	bool "Support poc SPI connection"
+	depends on MCD_PANEL
+	default n
+
+config SUPPORT_GM2_FLASH
+	bool "Support to get Gamma-mode2 panel info from flash"
+	depends on MCD_PANEL
+	default n
+
+config DYNAMIC_MIPI
+	bool "Support Dynamic Mipi"
+	depends on MCD_PANEL
+	default n
+
+config PANEL_DISPLAY_MODE
+	bool "Support panel display mode"
+	depends on MCD_PANEL
+	default n
+
+config EXYNOS_LCD_ENG
+	bool "Support LCD featue on ENG binary"
+	depends on MCD_PANEL
+	default n
+
+config PANEL_DEBUG
+	bool "Support panel debug"
+	depends on MCD_PANEL
+	default n
+
+config SUPPORT_MASK_LAYER
+	bool "Support FP mask layer function"
+	depends on MCD_PANEL
+	default n
+
+config SUPPORT_ERRFG_RECOVERY
+	bool "Support ERRFG recovery"
+	depends on MCD_PANEL
+	default n
+
+config SUPPORT_BRIGHTDOT_TEST
+	bool "Support Brightdot Test"
+	depends on MCD_PANEL
+	default n
+
+config EVASION_DISP_DET
+    bool "Support avoid disp_det interrupt"
+    depends on MCD_PANEL
+    default n
+
+source "drivers/video/fbdev/exynos/mcd_panel/s6e36w4x01/Kconfig"
+source "drivers/video/fbdev/exynos/mcd_panel/s6e36w5x01/Kconfig"
+source "drivers/video/fbdev/exynos/mcd_panel/rm69091/Kconfig"
+

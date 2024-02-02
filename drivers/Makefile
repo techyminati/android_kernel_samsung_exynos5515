@@ -66,6 +66,7 @@ obj-$(CONFIG_CONNECTOR)		+= connector/
 # i810fb and intelfb depend on char/agp/
 obj-$(CONFIG_FB_I810)           += video/fbdev/i810/
 obj-$(CONFIG_FB_INTEL)          += video/fbdev/intelfb/
+obj-$(CONFIG_USE_MUIC)	+= muic/
 
 obj-$(CONFIG_PARPORT)		+= parport/
 obj-$(CONFIG_NVM)		+= lightnvm/
@@ -188,3 +189,29 @@ obj-$(CONFIG_MULTIPLEXER)	+= mux/
 obj-$(CONFIG_UNISYS_VISORBUS)	+= visorbus/
 obj-$(CONFIG_SIOX)		+= siox/
 obj-$(CONFIG_GNSS)		+= gnss/
+obj-$(CONFIG_EXYNOS_BTS)	+= bts/
+obj-$(CONFIG_SEC_EXT)		+= samsung/
+
+# Mobicore driver
+obj-$(CONFIG_TRUSTONIC_TEE)     += gud/
+
+# Battery driver
+obj-$(CONFIG_BATTERY_SAMSUNG_V2)	+= battery_v2/
+
+# Sensorhub driver
+obj-$(CONFIG_SENSORS_SSP)   += sensorhub/
+
+# Vibrator
+obj-y				+= vibrator/
+
+# OLOG
+obj-y				+= kperfmon/
+
+# uH
+obj-$(CONFIG_UH)        += uh/
+
+# SPU signature verify
+obj-$(CONFIG_SPU_VERIFY) += spu_verify/
+
+#TZIC
+obj-$(CONFIG_TZIC)	+= security/samsung/tzic/

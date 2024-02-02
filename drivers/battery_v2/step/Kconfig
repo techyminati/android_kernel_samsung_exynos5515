@@ -1,0 +1,15 @@
+config SB_STEP
+	tristate "sb-step"
+	default n
+	help
+		Say Y here to enable.
+		support for sec battery step API.
+		refer to API headers.
+
+config SB_STEP_WATCH5
+	tristate "use Step Charging for Watch5"
+	default n
+	depends on SB_STEP
+	help
+		Say Y to use Step Charging for Watch5
+		made by PSG.

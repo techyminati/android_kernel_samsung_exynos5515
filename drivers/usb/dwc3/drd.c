@@ -422,9 +422,13 @@ static void dwc3_drd_update(struct dwc3 *dwc)
 		id = extcon_get_state(dwc->edev, EXTCON_USB_HOST);
 		if (id < 0)
 			id = 0;
-		dwc3_set_mode(dwc, id ?
-			      DWC3_GCTL_PRTCAP_HOST :
-			      DWC3_GCTL_PRTCAP_DEVICE);
+	/* Force set OTG mode, modify this after device bring-up */
+	dwc3_set_mode(dwc, DWC3_GCTL_PRTCAP_OTG);
+	/* Force set OTG mode, modify this after device bring-up
+	*dwc3_set_mode(dwc, id ?
+	*	      DWC3_GCTL_PRTCAP_HOST :
+	*	      DWC3_GCTL_PRTCAP_DEVICE);
+	*/
 	}
 }
 
@@ -523,10 +527,10 @@ void dwc3_drd_exit(struct dwc3 *dwc)
 					   &dwc->edev_nb);
 
 	cancel_work_sync(&dwc->drd_work);
-
+	/*dwc3_set_mode(dwc, DWC3_GCTL_PRTCAP_DEVICE);*/
 	/* debug user might have changed role, clean based on current role */
 	switch (dwc->current_dr_role) {
-	case DWC3_GCTL_PRTCAP_HOST:
+	dwc3_set_mode(dwc, DWC3_GCTL_PRTCAP_OTG);
 		dwc3_host_exit(dwc);
 		break;
 	case DWC3_GCTL_PRTCAP_DEVICE:

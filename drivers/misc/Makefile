@@ -59,3 +59,11 @@ obj-$(CONFIG_PCI_ENDPOINT_TEST)	+= pci_endpoint_test.o
 obj-$(CONFIG_OCXL)		+= ocxl/
 obj-$(CONFIG_MISC_RTSX)		+= cardreader/
 obj-$(CONFIG_UID_SYS_STATS)	+= uid_sys_stats.o
+obj-$(CONFIG_UART_SEL)		+= uart_sel/
+obj-y						+= samsung/
+
+# TEEGRIS kernel driver
+obj-$(CONFIG_TZDEV)		+= tzdev/
+
+obj-$(CONFIG_KNOX_GEARPAY)	+= knox_gearpay.o
+ccflags-$(CONFIG_KNOX_GEARPAY) += -I$(srctree)/drivers/misc/tzdev/include

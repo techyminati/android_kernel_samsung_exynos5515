@@ -53,3 +53,7 @@ obj-$(CONFIG_SOC_MT7621)	+= mt7621-dts/
 obj-$(CONFIG_STAGING_GASKET_FRAMEWORK)	+= gasket/
 obj-$(CONFIG_XIL_AXIS_FIFO)	+= axis-fifo/
 obj-$(CONFIG_EROFS_FS)		+= erofs/
+obj-$(CONFIG_EXYNOS_LPD)	+= lpd/
+obj-$(CONFIG_EXYNOS_LPD)	+= lpd_v2/
+obj-$(CONFIG_NANOHUB)		+= nanohub/
+obj-$(CONFIG_SEC_STI)		+= sti/

@@ -17,6 +17,8 @@ obj-$(CONFIG_SND_SAMSUNG_SPDIF) += snd-soc-samsung-spdif.o
 obj-$(CONFIG_SND_SAMSUNG_PCM) += snd-soc-pcm.o
 obj-$(CONFIG_SND_SAMSUNG_I2S) += snd-soc-i2s.o
 obj-$(CONFIG_SND_SAMSUNG_I2S) += snd-soc-idma.o
+obj-$(CONFIG_SND_SOC_SAMSUNG_VTS) += vts/
+obj-$(CONFIG_SND_SOC_SAMSUNG_ABOX) += abox/
 
 # S3C24XX Machine Support
 snd-soc-jive-wm8750-objs := jive_wm8750.o
@@ -64,3 +66,5 @@ obj-$(CONFIG_SND_SOC_BELLS) += snd-soc-bells.o
 obj-$(CONFIG_SND_SOC_ODROID) += snd-soc-odroid.o
 obj-$(CONFIG_SND_SOC_ARNDALE_RT5631_ALC5631) += snd-soc-arndale-rt5631.o
 obj-$(CONFIG_SND_SOC_SAMSUNG_TM2_WM5110) += snd-soc-tm2-wm5110.o
+obj-$(CONFIG_SND_SOC_SAMSUNG_S5E5515_SOUND) += s5e5515_sound.o
+obj-$(CONFIG_SND_SOC_SAMSUNG_AUDIO) += sec_audio_debug.o

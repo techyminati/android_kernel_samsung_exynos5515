@@ -1,0 +1,100 @@
+/*
+ * SAMSUNG EXYNOS5515 sensor device tree source
+ *
+ * Copyright (c) 2021 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+&pinctrl_0 {
+	ssp_int: ssp-int {
+		samsung,pins = "gpa0-2";
+		samsung,pin-function = <0xf>;
+		samsung,pin-pud = <1>; /* Pull-down */
+		samsung,pin-drv = <0>; /* 1x */
+	};
+};
+
+&pinctrl_1 {
+	hrm_int_pu: hrm-int-pu {
+		samsung,pins = "gpm10-0";
+		samsung,pin-function = <0x0>; /* Input */
+		samsung,pin-pud = <5>; /* 5 : Pull-up(2Kohm)*/
+		samsung,pin-drv = <0>; /* 1x */
+	};
+	hrm_int_pd: hrm-int-pd {
+		samsung,pins = "gpm10-0";
+		samsung,pin-function = <0x0>; /* Input */
+		samsung,pin-pud = <1>; /* Pull-down */
+		samsung,pin-drv = <0>; /* 1x */
+	};
+	hrm_spi1_pd: hrm-spi1-pd {
+		samsung,pins = "gpm11-0";
+		samsung,pin-function = <0x0>; /* Input */
+		samsung,pin-pud = <1>;
+		samsung,pin-drv = <0>; /* 1x */
+	};
+	hrm_spi2_pd: hrm-spi2-pd {
+		samsung,pins = "gpm12-0";
+		samsung,pin-function = <0x0>; /* Input */
+		samsung,pin-pud = <1>;
+		samsung,pin-drv = <0>; /* 1x */
+	};
+	hrm_spi3_pd: hrm-spi3-pd {
+		samsung,pins = "gpm13-0";
+		samsung,pin-function = <0x0>; /* Input */
+		samsung,pin-pud = <1>;
+		samsung,pin-drv = <0>; /* 1x */
+	};
+	hrm_spi4_pd: hrm-spi4-pd {
+		samsung,pins = "gpm14-0";
+		samsung,pin-function = <0x0>; /* Input */
+		samsung,pin-pud = <1>;
+		samsung,pin-drv = <0>; /* 1x */
+	};
+};
+
+&contexthub_0 {
+	chub-irq-pin-len = <6>;
+	chub-irq-pin = <&gpm10 0 0>, <&gpm17 0 0>, <&gpm19 0 0>, <&gpm20 0 0>, <&gpm21 0 0>, <&gpm22 0 0>;
+	pinctrl-names = "default","hrm_pu","hrm_pd","hrm_spi";
+	pinctrl-0 = <&ssp_int>;
+	pinctrl-1 = <&hrm_int_pu>;
+	pinctrl-2 = <&hrm_int_pd>;
+	pinctrl-3 = <&hrm_spi1_pd &hrm_spi2_pd &hrm_spi3_pd &hrm_spi4_pd>;
+	ssp,irq_gpio = <&gpa0 2 0>;
+	ssp,hrm_int = <&gpm10 0 0>;
+};
+
+&gpm10 {
+	interrupts = <>;
+	status = "disabled";
+};
+
+&gpm17 {
+	interrupts = <>;
+	status = "disabled";
+};
+
+&gpm19 {
+	interrupts = <>;
+	status = "disabled";
+};
+
+&gpm20 {
+	interrupts = <>;
+	status = "disabled";
+};
+
+&gpm21 {
+	interrupts = <>;
+	status = "disabled";
+};
+
+&gpm22 {
+	interrupts = <>;
+	status = "disabled";
+};

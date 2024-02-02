@@ -1,0 +1,34 @@
+/*
+ * SAMSUNG EXYNOS5515 Power Management device tree source
+ *
+ * Copyright (c) 2021 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/ {
+	fragment@common {
+		target-path = "/";
+		__overlay__ {
+			gnssif {
+				pinctrl-names = "default";
+				pinctrl-0 = <&gnss_rfic_reset>;
+
+				gpio_rfic_reset = <&gpm23 0 0x1>;
+			};
+		}; /* end of __overlay__ */
+	}; /* end of fragment */
+}; /* end of root */
+
+&pinctrl_1 {
+	gnss_rfic_reset: gnss_rfic_reset {
+		samsung,pins = "gpm23-0";
+		samsung,pin-function = <0x1>;
+		samsung,pin-pud = <0>;
+		samsung,pin-drv = <0>;
+	};
+};
+

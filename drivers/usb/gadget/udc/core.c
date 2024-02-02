@@ -758,6 +758,7 @@ int usb_gadget_disconnect(struct usb_gadget *gadget)
 		goto out;
 	}
 
+	gadget->udc->driver->disconnect(gadget);
 	ret = gadget->ops->pullup(gadget, 0);
 	if (!ret)
 		gadget->connected = 0;
@@ -1328,10 +1329,11 @@ static void usb_gadget_remove_driver(struct usb_udc *udc)
 
 	kobject_uevent(&udc->dev.kobj, KOBJ_CHANGE);
 
-	usb_gadget_disconnect(udc->gadget);
-	udc->driver->disconnect(udc->gadget);
-	udc->driver->unbind(udc->gadget);
 	usb_gadget_udc_stop(udc);
+	usb_gadget_disconnect(udc->gadget);
+	if (udc->gadget->irq)
+		synchronize_irq(udc->gadget->irq);
+	udc->driver->unbind(udc->gadget);
 
 	udc->driver = NULL;
 	udc->dev.driver = NULL;
@@ -1416,19 +1418,28 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver)
 	int			ret = -ENODEV;
 
 	if (!driver || !driver->bind || !driver->setup)
+	{
+		printk("probe 1\n");
 		return -EINVAL;
+	}
 
 	mutex_lock(&udc_lock);
 	if (driver->udc_name) {
 		list_for_each_entry(udc, &udc_list, list) {
 			ret = strcmp(driver->udc_name, dev_name(&udc->dev));
-			if (!ret)
+			if (!ret){
+				printk("probe 2\n");
 				break;
+			}
 		}
-		if (ret)
+		if (ret){
+			printk("probe 3\n");
 			ret = -ENODEV;
-		else if (udc->driver)
+		}
+		else if (udc->driver){
+			printk("probe 4\n");
 			ret = -EBUSY;
+		}
 		else
 			goto found;
 	} else {
@@ -1444,11 +1455,13 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver)
 		pr_info("udc-core: couldn't find an available UDC - added [%s] to list of pending drivers\n",
 			driver->function);
 		ret = 0;
+		printk("probe 5\n");
 	}
 
 	mutex_unlock(&udc_lock);
 	return ret;
 found:
+	printk("probe 6\n");
 	ret = udc_bind_to_driver(udc, driver);
 	mutex_unlock(&udc_lock);
 	return ret;

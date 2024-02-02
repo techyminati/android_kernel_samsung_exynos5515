@@ -1,0 +1,35 @@
+#
+# (C) COPYRIGHT 2012-2013 ARM Limited. All rights reserved.
+#
+# This program is free software and is provided to you under the terms of the
+# GNU General Public License version 2 as published by the Free Software
+# Foundation, and any use by you of this program is subject to the terms
+# of such GNU licence.
+#
+# A copy of the licence is included with the program, and can also be obtained
+# from Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
+#
+#
+
+menu "ARM GPU Configuration"
+
+choice
+	prompt "Mali Version Configuration"
+	default MALI_DDK_NONE
+	help
+	  Select the gpu support version.
+
+config MALI_DDK_NONE
+    bool "None"
+
+config MALI_VALHALL_R26P0_R
+	bool "Valhall r26p0 driver"
+
+endchoice
+
+if MALI_VALHALL_R26P0_R
+source "drivers/gpu/arm/bv_r26p0/Kconfig"
+endif
+
+endmenu

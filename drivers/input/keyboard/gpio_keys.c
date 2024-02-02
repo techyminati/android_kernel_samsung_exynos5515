@@ -31,6 +31,21 @@
 #include <linux/of_irq.h>
 #include <linux/spinlock.h>
 #include <dt-bindings/input/gpio-keys.h>
+#if defined(CONFIG_DRV_SAMSUNG)
+#include <linux/sec_class.h>
+#endif
+
+#ifdef CONFIG_KNOX_GEARPAY
+#include <linux/time.h>
+#include <linux/knox_gearpay.h>
+#endif
+
+struct device *sec_key;
+EXPORT_SYMBOL(sec_key);
+
+#if defined(CONFIG_KEYBOARD_S2MPW03) || defined(CONFIG_KEYBOARD_S2MPW02)
+extern int get_pkey_press(void);
+#endif
 
 struct gpio_button_data {
 	const struct gpio_keys_button *button;
@@ -51,6 +66,7 @@ struct gpio_button_data {
 	bool disabled;
 	bool key_pressed;
 	bool suspended;
+	bool key_state;
 };
 
 struct gpio_keys_drvdata {
@@ -359,6 +375,86 @@ static const struct attribute_group gpio_keys_attr_group = {
 	.attrs = gpio_keys_attrs,
 };
 
+static ssize_t key_pressed_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
+	int i;
+	int keystate = 0;
+
+	for (i = 0; i < ddata->pdata->nbuttons; i++) {
+		struct gpio_button_data *bdata = &ddata->data[i];
+
+		keystate |= bdata->key_state;
+	}
+
+	if (keystate)
+		sprintf(buf, "PRESS");
+	else
+		sprintf(buf, "RELEASE");
+
+	return strlen(buf);
+}
+
+static ssize_t keycode_pressed_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
+	int index;
+	int state, keycode;
+	char *buff;
+	char tmp[7] = {0};
+	ssize_t count;
+	int len = (ddata->pdata->nbuttons) * 8 + 2;
+
+	buff = kmalloc(len, GFP_KERNEL);
+	if (!buff) {
+		pr_err("%s: failed to mem alloc\n", __func__);
+		return snprintf(buf, 5, "NG\n");
+	}
+
+	for (index = 0; index < ddata->pdata->nbuttons; index++) {
+		struct gpio_button_data *button;
+
+		button = &ddata->data[index];
+		state = button->key_state;
+		keycode = button->button->code;
+		if (index == 0) {
+			snprintf(buff, 7, "%d:%d", keycode, state);
+		} else {
+			snprintf(tmp, 7, ",%d:%d", keycode, state);
+			strncat(buff, tmp, 7);
+		}
+	}
+
+#if defined(CONFIG_KEYBOARD_S2MPW03) || defined(CONFIG_KEYBOARD_S2MPW02)
+	state = get_pkey_press();
+	keycode = KEY_POWER;
+	snprintf(tmp, 7, ",%d:%d", keycode, state);
+	strncat(buff, tmp, 7);
+#endif
+
+	pr_info("%s: %s\n", __func__, buff);
+	count = snprintf(buf, strnlen(buff, len - 2) + 2, "%s\n", buff);
+
+	kfree(buff);
+
+	return count;
+}
+
+static DEVICE_ATTR(sec_key_pressed, 0444, key_pressed_show, NULL);
+static DEVICE_ATTR(keycode_pressed, 0444, keycode_pressed_show, NULL);
+
+static struct attribute *sec_key_attrs[] = {
+	&dev_attr_sec_key_pressed.attr,
+	&dev_attr_keycode_pressed.attr,
+	NULL,
+};
+
+static struct attribute_group sec_key_attr_group = {
+	.attrs = sec_key_attrs,
+};
+
 static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 {
 	const struct gpio_keys_button *button = bdata->button;
@@ -373,10 +469,29 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 		return;
 	}
 
+	pr_info("[sec_input] %s: %d (%d)\n", __func__, button->code, state);
+
+#ifdef CONFIG_KNOX_GEARPAY
+	if (button->code == 580) {
+		u32 time;
+		u32 press;
+
+		time = ktime_to_ms(ktime_get());
+		if (!!state)
+			press = BUTTON_EVENT_PRESSED;
+		else
+			press = BUTTON_EVENT_RELEASED;
+
+		knox_gearpay_hard_button_event(press, time);
+		pr_info("[sec_input] primary key: %d, time: %d\n", press, time);
+	}
+#endif
+
 	if (type == EV_ABS) {
 		if (state)
 			input_event(input, type, button->code, button->value);
 	} else {
+		bdata->key_state = state;
 		input_event(input, type, *bdata->code, state);
 	}
 	input_sync(input);
@@ -863,16 +978,35 @@ static int gpio_keys_probe(struct platform_device *pdev)
 		return error;
 	}
 
+#ifdef CONFIG_DRV_SAMSUNG
+	sec_key = sec_device_create(ddata, "sec_key");
+	if (IS_ERR(sec_key))
+		pr_err("%s failed to create sec_key\n", __func__);
+
+	error = sysfs_create_group(&sec_key->kobj, &sec_key_attr_group);
+	if (error) {
+		dev_err(dev, "Unable to export keys/switches, error: %d\n",
+			error);
+		goto err_remove_group;
+	}
+#endif
+
 	error = input_register_device(input);
 	if (error) {
 		dev_err(dev, "Unable to register input device, error: %d\n",
 			error);
-		return error;
+		goto err_remove_group;
 	}
 
 	device_init_wakeup(dev, wakeup);
 
 	return 0;
+
+err_remove_group:
+#ifdef CONFIG_DRV_SAMSUNG
+	sysfs_remove_group(&pdev->dev.kobj, &gpio_keys_attr_group);
+#endif
+	return error;
 }
 
 static int __maybe_unused

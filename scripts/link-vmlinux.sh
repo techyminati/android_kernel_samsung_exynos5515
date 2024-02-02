@@ -355,3 +355,15 @@ if [ -n "${CONFIG_KALLSYMS}" ]; then
 		exit 1
 	fi
 fi
+
+# FIPS
+if [ -n "${CONFIG_CRYPTO_FIPS}" ]; then
+	echo '  FIPS : Generating hmac of crypto and updating vmlinux... '
+	PYTHONDONTWRITEBYTECODE=0 "${srctree}/scripts/crypto/fips_crypto_integrity.py" \
+		"${objtree}/vmlinux" "${objtree}/crypto" "${objtree}/arch/arm64/crypto"
+fi
+
+if [ -n "${CONFIG_EXYNOS_FMP_FIPS}" ]; then
+    echo '  FIPS : Generating hmac of fmp and updating vmlinux... '
+	PYTHONDONTWRITEBYTECODE=0 "${srctree}/scripts/fmp/fips_fmp_integrity.py" "${objtree}/vmlinux"
+fi

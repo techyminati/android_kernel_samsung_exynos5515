@@ -645,4 +645,42 @@ config CHARGER_CROS_USBPD
 	  what is connected to USB PD ports from the EC and converts
 	  that into power_supply properties.
 
+config CHARGER_S2MPW03
+	tristate "Samsung S2MPW03 charger driver"
+	depends on MFD_S2MPW03 && I2C
+	help
+	  Say Y here to enable support for the Samsung S2MPW03
+	  battery charger can supoprt PMIC, Audio Codec, Fuel-gauge.
+
+config S2MPW03_RID_DETECT
+	tristate "S2MPW03 RID detect feature"
+	default n
+	depends on CHARGER_S2MPW03
+	depends on MFD_S2MPW03
+	help
+	  Say Y to include support
+	  for S2MPW03 charger RID detection feature.
+	  This feature replace MUIC fuctionality.
+
+config FUELGAUGE_S2MPW03
+	tristate "Samsung S2MPW03 fuelgauge driver"
+	depends on MFD_S2MPW03 && I2C
+	help
+	 Say Y to enable support for the Samsung S2MPW03 Fuelgauge
+
+config BATTERY_S2MU00X
+	tristate "S2MU00X battery driver"
+	depends on (MFD_S2MPW03) && I2C
+	help
+	  Say Y here to enable support for S2MU00X battery driver.
+
+config S2MPW03_TA_DETECT
+	tristate "Samsung S2MPW03 TA detect feature"
+	default n
+	depends on CHARGER_S2MPW03
+	depends on MFD_S2MPW03
+	help
+	 This feature have TA detected as USB.
+	 USB driver will tell if it's real USB or not.
+
 endif # POWER_SUPPLY

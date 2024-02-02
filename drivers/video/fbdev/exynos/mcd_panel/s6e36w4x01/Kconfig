@@ -1,0 +1,7 @@
+menuconfig DISPLAY_S6E36W4X01
+	tristate "S6E36W4X01 DDI Panel Driver"
+	depends on MCD_PANEL && EXYNOS_MIPI_DSIM
+	help
+		This enables S6E36W4X01 DDI dependent panel drivers of
+		common panel driver. say Y, if you have a panel based on
+		the S6E36W4X01 DDI.

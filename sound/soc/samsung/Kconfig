@@ -209,4 +209,16 @@ config SND_SOC_SAMSUNG_TM2_WM5110
 	help
 	  Say Y if you want to add support for SoC audio on the TM2 board.
 
+config SND_SOC_SAMSUNG_S5E5515_SOUND
+	tristate "S.LSI audio codec AUD9001X support on S5E5515"
+	select SND_SOC_AUD9001X
+
+config SND_SOC_SAMSUNG_AUDIO
+	tristate "Audio support for Samsung Projects"
+	help
+	  Say Y here to enable audio support for the Samsung Audio.
+
+source "sound/soc/samsung/abox/Kconfig"
+source "sound/soc/samsung/vts/Kconfig"
+
 endif #SND_SOC_SAMSUNG

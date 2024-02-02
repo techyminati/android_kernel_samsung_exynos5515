@@ -41,8 +41,10 @@ arm64-obj-$(CONFIG_HW_PERF_EVENTS)	+= perf_event.o
 arm64-obj-$(CONFIG_HAVE_HW_BREAKPOINT)	+= hw_breakpoint.o
 arm64-obj-$(CONFIG_CPU_PM)		+= sleep.o suspend.o
 arm64-obj-$(CONFIG_CPU_IDLE)		+= cpuidle.o
+arm64-obj-$(CONFIG_ARCH_EXYNOS9)         += exynos-smc.o
 arm64-obj-$(CONFIG_JUMP_LABEL)		+= jump_label.o
 arm64-obj-$(CONFIG_KGDB)		+= kgdb.o
+arm64-obj-$(CONFIG_ARCH_EXYNOS)         += exynos-smc.o
 arm64-obj-$(CONFIG_EFI)			+= efi.o efi-entry.stub.o		\
 					   efi-rt-wrapper.o
 arm64-obj-$(CONFIG_PCI)			+= pci.o
@@ -62,6 +64,7 @@ arm64-obj-$(CONFIG_CRASH_CORE)		+= crash_core.o
 arm64-obj-$(CONFIG_ARM_SDE_INTERFACE)	+= sdei.o
 arm64-obj-$(CONFIG_ARM64_SSBD)		+= ssbd.o
 arm64-obj-$(CONFIG_SHADOW_CALL_STACK)	+= scs.o
+arm64-obj-$(CONFIG_UH)			+= uh_entry.o
 
 obj-y					+= $(arm64-obj-y) vdso/ probes/
 obj-m					+= $(arm64-obj-m)

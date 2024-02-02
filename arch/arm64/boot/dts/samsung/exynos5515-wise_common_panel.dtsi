@@ -1,0 +1,122 @@
+/*
+ * Samsung Exynos SoC series Panel driver
+ *
+ * Copyright (c) 2020 Samsung Electronics Co., Ltd
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/display/exynos-display.h>
+#include "ddi_s6e36w4x01_data.dtsi"
+#include "ddi_s6e36w5x01_data.dtsi"
+#include "ddi_rm69091_data.dtsi"
+
+/ {
+	fragment@panel_drv {
+		target-path = "/";
+		__overlay__ {
+
+			pinctrl@12850000 {
+				err_fg_default: err-fg-default {
+					samsung,pins = "gpa0-5";
+					samsung,pin-function = <0xf>;			// INT
+					samsung,pin-pud = <1>;				// PD
+				};
+			};
+
+			pinctrl@10110000 {
+				ub_conn_det: ub_conn_det {
+					samsung,pins = "gpg4-1";
+					samsung,pin-function = <0>;				// IN
+					samsung,pin-pud = <0>;					// NP
+					samsung,pin-con-pdn = <2>;
+					samsung,pin-pud-pdn = <0>;				// NP
+				};
+
+				disp_rst: disp_rst {
+					samsung,pins = "gpg3-1";
+					samsung,pin-function = <1>;
+					samsung,pin-pud = <0>;
+				};
+
+				disp_avdden: disp_avdden {
+					samsung,pins = "gpg7-0";
+					samsung,pin-function = <0>;
+					samsung,pin-con-pdn = <3>;
+					samsung,pin-pud-pdn = <0>;
+				};
+
+				disp_te_default: disp_te_default {
+					samsung,pins = "gpc1-0";
+					samsung,pin-funciton = <0xf>;			// INT
+					samsung,pin-pud = <1>;					// PD
+					samsung,pin-con-pdn = <3>;				// PREV in sleep
+					samsung,pin-pud-pdn = <0>;				// NP in sleep
+				};
+			};
+
+			panel_drv_0: panel_drv_0 {
+				status = "okay";
+				compatible = "samsung,panel-drv";
+				panel,id = <0>;
+
+				pinctrl-names = "default";
+				pinctrl-0 = <&ub_conn_det &disp_rst &disp_avdden &err_fg_default &disp_te_default>;
+
+				gpios {
+					disp-reset {
+						name = "disp-reset";
+						gpios = <&gpg3 1 1>;	/* ACTIVE_LOW */
+						dir = <0>;  /* OUT */
+						irq-type = <0x0>;   /* NONE */
+					};
+
+					conn-det {
+						name = "conn-det";
+						gpios = <&gpg4 1 0>;
+						dir = <1>;
+						irq-type = <0x00002001>;	/*RISING EDGE | ONE_SHOT*/
+					};
+
+					avdd_en {
+						name = "avdd_en";
+						gpios = <&gpg7 0 1>;
+						dir = <0>;
+						irq-type = <0x0>;
+					};
+
+					err-fg {
+						name = "err-fg";
+						gpios = <&gpa0 5 0>;
+						dir = <1>;			/* IN */
+						irq-type = <0x00002001>;	/* RISING EDGE | ONE_SHOT */
+					};
+				};
+
+				regulators {
+					ddi-vdd3 {
+						regulator = <&ldo22_reg>;
+						def-voltage = <1800000>;
+						lpm-voltage = <1800000>;
+					};
+				};
+
+				panel-lookup {
+					panel-name = "s6e36w4x01_wise_a2_s0","s6e36w5x01_large_a2_s0", "s6e36w5x01_small_a2_s0", "rm69091_large_b7_s0", "rm69091_small_b7_s0";
+					panel-ddi-info = <&s6e36w4x01 &s6e36w5x01_large &s6e36w5x01_small &rm69091_large &rm69091_small>;
+					panel-lut = <
+						0x406482 0x406482 0x0 0x0  /* 1st panel S6E36W4X01 (For Bringup)  */
+						0x402000 0x412000 0x1 0x1  /* 2nd panel S6E36W5X01 Large */
+						0x400000 0x412000 0x2 0x2  /* 3rd panel S6E36W5X01 Small */
+						0x412000 0x412000 0x3 0x3  /* 4th panel RM69091 Large */
+						0x410000 0x412000 0x4 0x4  /* 5th panel RM69091 Small */
+						0x000000 0x000000 0x1 0x1  /* default Large */
+						>;
+				};
+			};
+		};
+	};
+};

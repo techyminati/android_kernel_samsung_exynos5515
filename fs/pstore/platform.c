@@ -44,6 +44,7 @@
 #include <linux/uaccess.h>
 #include <linux/jiffies.h>
 #include <linux/workqueue.h>
+#include <linux/pstore_ram.h>
 
 #include "internal.h"
 
@@ -526,6 +527,8 @@ static int pstore_write_user_compat(struct pstore_record *record,
 		ret = PTR_ERR(record->buf);
 		goto out;
 	}
+
+	pram_hook_pmsg((char *)buf, record->size);
 
 	ret = record->psi->write(record);
 

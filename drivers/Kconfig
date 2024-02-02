@@ -75,6 +75,8 @@ source "drivers/w1/Kconfig"
 
 source "drivers/power/Kconfig"
 
+source "drivers/muic/Kconfig"
+
 source "drivers/hwmon/Kconfig"
 
 source "drivers/thermal/Kconfig"
@@ -222,4 +224,23 @@ source "drivers/siox/Kconfig"
 source "drivers/slimbus/Kconfig"
 
 source "drivers/energy_model/Kconfig"
+
+source "drivers/bts/Kconfig"
+
+source "drivers/gud/Kconfig"
+
+source "drivers/battery_v2/Kconfig"
+
+source "drivers/sensorhub/Kconfig"
+
+source "drivers/samsung/Kconfig"
+
+source "drivers/vibrator/Kconfig"
+
+source "drivers/kperfmon/Kconfig"
+
+source "drivers/spu_verify/Kconfig"
+
+source "drivers/security/samsung/tzic/Kconfig"
+
 endmenu

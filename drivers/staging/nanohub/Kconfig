@@ -1,0 +1,80 @@
+config NANOHUB
+	tristate "Nanohub"
+	default N
+	select IIO
+	select CONTEXTHUB_DRV
+	help
+	  Enable support for the nanohub sensorhub driver.
+
+	  This driver supports the android nanohub sensorhub.
+
+	  If in doubt, say N here.
+
+if NANOHUB
+
+config NANOHUB_SPI
+	bool "Nanohub SPI"
+	default N
+	help
+	  Enable nanohub SPI support.
+
+	  Either this or NANOHUB_I2C should be selected.
+
+	  If in doubt, say Y here.
+
+config NANOHUB_I2C
+	bool "Nanohub I2C"
+	default N
+	help
+	  Enable nanohub I2C support.
+
+	  Either this or NANOHUB_SPI should be selected.
+
+	  If in doubt, say N here.
+
+config NANOHUB_MAILBOX
+	bool "Nanohub Mailbox"
+	default Y
+	help
+	  Enable nanohub Mailbox support.
+
+	  Either this or NANOHUB_MAILBOX should be selected.
+
+	  If in doubt, say N here.
+
+config CONTEXTHUB_DRV
+	bool "Contexthub driver"
+	default Y
+	help
+	  Enable contexthub driver
+
+config SENSOR_DRV
+	bool "Sensor driver to support exynos sensor Hal"
+	default N
+	help
+	  Enable sensorhub hal support.
+
+config CONTEXTHUB_DEBUG
+	bool "Nanohub debug"
+	default N
+	help
+	  Enable nanohub device debug message
+
+config CONTEXTHUB_SENSOR_DEBUG
+	bool "Nanohub sensor debug"
+	default N
+	help
+	  Enable nanohub seneor alive check
+
+config SENSORS_SSP_HRM_ADI
+	tristate "ADI HRM sensor support"
+	default N
+	help
+	  Support ADI HRM sensor.
+
+config SENSORS_SSP_DEBUG
+	bool "ssp sensor debug"
+	default N
+	help
+	  Enable ssp sensor debug message
+endif # NANOHUB

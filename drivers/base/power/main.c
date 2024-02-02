@@ -34,6 +34,7 @@
 #include <linux/cpuidle.h>
 #include <linux/timer.h>
 #include <linux/wakeup_reason.h>
+#include <linux/sec_debug.h>
 
 #include "../base.h"
 #include "power.h"
@@ -515,6 +516,9 @@ static void dpm_watchdog_handler(struct timer_list *t)
 	struct dpm_watchdog *wd = from_timer(wd, t, timer);
 
 	dev_emerg(wd->dev, "**** DPM device timeout ****\n");
+#ifdef CONFIG_SEC_DEBUG_EXTRA_INFO
+	secdbg_exin_set_dpm_timeout((char *)dev_name(wd->dev));
+#endif
 	show_stack(wd->tsk, NULL);
 	panic("%s %s: unrecoverable failure\n",
 		dev_driver_string(wd->dev), dev_name(wd->dev));
@@ -1877,6 +1881,10 @@ static void async_suspend(void *data, async_cookie_t cookie)
 	if (error) {
 		dpm_save_failed_dev(dev_name(dev));
 		pm_dev_err(dev, pm_transition, " async", error);
+#ifdef CONFIG_SEC_PM_DEBUG
+		log_suspend_abort_reason("Device %s failed to suspend async: %d",
+				dev_name(dev), error);
+#endif
 	}
 
 	put_device(dev);
@@ -1924,6 +1932,10 @@ int dpm_suspend(pm_message_t state)
 		if (error) {
 			pm_dev_err(dev, state, "", error);
 			dpm_save_failed_dev(dev_name(dev));
+#ifdef CONFIG_SEC_PM_DEBUG
+			log_suspend_abort_reason("Device %s failed to suspend: %d",
+					dev_name(dev), error);
+#endif
 			put_device(dev);
 			break;
 		}

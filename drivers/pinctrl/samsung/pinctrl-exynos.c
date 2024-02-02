@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
 #include <linux/err.h>
 #include <linux/soc/samsung/exynos-pmu.h>
 #include <linux/soc/samsung/exynos-regs-pmu.h>
@@ -206,11 +207,17 @@ static void exynos_irq_release_resources(struct irq_data *irqd)
 
 /*
  * irq_chip for gpio interrupts.
+ * For normal interrupt action, interrupt mask / unmask must be paired.
+ * When suspend to resume, irq mask cannot be done without irq_disable callback.
+ * We added irq mask & unmask to disable & enable callback to
+ * set the interrupt mask and unmask value completely.
  */
 static struct exynos_irq_chip exynos_gpio_irq_chip = {
 	.chip = {
 		.name = "exynos_gpio_irq_chip",
+		.irq_enable = exynos_irq_unmask,
 		.irq_unmask = exynos_irq_unmask,
+		.irq_disable = exynos_irq_mask,
 		.irq_mask = exynos_irq_mask,
 		.irq_ack = exynos_irq_ack,
 		.irq_set_type = exynos_irq_set_type,
@@ -270,6 +277,53 @@ struct exynos_eint_gpio_save {
 	u32 eint_mask;
 };
 
+static void exynos_eint_flt_config(int en, int sel, int width,
+				   struct samsung_pinctrl_drv_data *d,
+				   struct samsung_pin_bank *bank)
+{
+	unsigned int flt_reg, flt_con;
+	unsigned int val, shift;
+	int i;
+	int loop_cnt;
+
+	flt_con = 0;
+
+	if (en)
+		flt_con |= EXYNOS_EINT_FLTCON_EN;
+
+	if (sel)
+		flt_con |= EXYNOS_EINT_FLTCON_SEL;
+
+	flt_con |= EXYNOS_EINT_FLTCON_WIDTH(width);
+
+	flt_reg = EXYNOS_GPIO_EFLTCON_OFFSET + bank->fltcon_offset;
+
+	if (bank->nr_pins > 4)
+		/* if nr_pins > 4, we should set FLTCON0 register fully.
+		 * (pin0 ~ 3)
+		 * So, we should loop 4 times in case of FLTCON0.
+		 */
+		loop_cnt = 4;
+	else
+		loop_cnt = bank->nr_pins;
+
+	val = readl(d->virt_base + flt_reg);
+
+	for (i = 0; i < loop_cnt; i++) {
+		shift = i * EXYNOS_EINT_FLTCON_LEN;
+		val &= ~(EXYNOS_EINT_FLTCON_MASK << shift);
+		val |= (flt_con << shift);
+	}
+
+	writel(val, d->virt_base + flt_reg);
+
+	/* if nr_pins > 4, we should also set FLTCON1 register like FLTCON0.
+	 * (pin4 ~ )
+	 */
+	if (bank->nr_pins > 4)
+		writel(val, d->virt_base + flt_reg + 0x4);
+};
+
 /*
  * exynos_eint_gpio_init() - setup handling of external gpio interrupts.
  * @d: driver data of samsung pinctrl driver.
@@ -314,6 +368,11 @@ int exynos_eint_gpio_init(struct samsung_pinctrl_drv_data *d)
 		}
 
 		bank->irq_chip = &exynos_gpio_irq_chip;
+
+		/* There is no filter selection register except for alive block.
+		 * Except for alive block, digital filter is default setting.
+		 */
+		exynos_eint_flt_config(EXYNOS_EINT_FLTCON_EN, 0, 0, d, bank);
 	}
 
 	return 0;
@@ -328,27 +387,80 @@ err_domains:
 	return ret;
 }
 
-static u32 exynos_eint_wake_mask = 0xffffffff;
+static DECLARE_BITMAP(exynos_eint_wake_mask_array_ul,
+			EXYNOS_EINT_WKUP_MASK_NUM * 32) = {
+			 [0 ... BITS_TO_LONGS(EXYNOS_EINT_WKUP_MASK_NUM * 32) - 1] = ~0UL };
 
-u32 exynos_get_eint_wake_mask(void)
-{
-	return exynos_eint_wake_mask;
-}
+u32 exynos_eint_wake_mask_array[EXYNOS_EINT_WKUP_MASK_NUM];
+EXPORT_SYMBOL(exynos_eint_wake_mask_array);
+
+static DECLARE_BITMAP(exynos_cmgp_eint_wake_mask_array_ul,
+			EXYNOS_EINT_WKUP_MASK_NUM * 32) = {
+			[0 ... BITS_TO_LONGS(EXYNOS_EINT_WKUP_MASK_NUM * 32) - 1] = ~0UL };
+u32 exynos_cmgp_eint_wake_mask_array[EXYNOS_EINT_WKUP_MASK_NUM];
+EXPORT_SYMBOL(exynos_cmgp_eint_wake_mask_array);
 
 static int exynos_wkup_irq_set_wake(struct irq_data *irqd, unsigned int on)
 {
-	struct irq_chip *chip = irq_data_get_irq_chip(irqd);
-	struct exynos_irq_chip *our_chip = to_exynos_irq_chip(chip);
 	struct samsung_pin_bank *bank = irq_data_get_irq_chip_data(irqd);
-	unsigned long bit = 1UL << (2 * bank->eint_offset + irqd->hwirq);
+	struct samsung_pinctrl_drv_data *d = bank->drvdata;
+	u32 bit = 0;
+	int i;
 
-	pr_info("wake %s for irq %d\n", on ? "enabled" : "disabled", irqd->irq);
+	bit = bank->eint_num + irqd->hwirq;
+	pr_info("%s: bit = %d, bank->eint_num = %d, irqd->hwirq = %d",
+			__func__, bit, bank->eint_num, irqd->hwirq);
 
 	if (!on)
-		exynos_eint_wake_mask |= bit;
+		exynos_eint_wake_mask_array_ul[BIT_WORD(bit)] |= BIT_MASK(bit);
 	else
-		exynos_eint_wake_mask &= ~bit;
-	our_chip->eint_wake_mask_value = exynos_eint_wake_mask;
+		exynos_eint_wake_mask_array_ul[BIT_WORD(bit)] &= ~BIT_MASK(bit);
+
+	bitmap_to_arr32(exynos_eint_wake_mask_array,
+			exynos_eint_wake_mask_array_ul,
+			EXYNOS_EINT_WKUP_MASK_NUM * 32);
+
+	dev_info(d->dev, "wake %s for irq %d\n", on ? "enabled" : "disabled",
+		 irqd->irq);
+	dev_info(d->dev, "(%s:0x%x) dirq = %d, eint_num = %u\n",
+		 bank->name, bank->eint_offset, d->irq, bank->eint_num);
+
+	for (i = 0; i < EXYNOS_EINT_WKUP_MASK_NUM; i++)
+		dev_dbg(d->dev, "exynos_eint_wake_mask value index %d = (0x%X)\n",
+		i, exynos_eint_wake_mask_array[i]);
+
+	return 0;
+}
+
+static int exynos_cmgp_wkup_irq_set_wake(struct irq_data *irqd, unsigned int on)
+{
+	struct samsung_pin_bank *bank = irq_data_get_irq_chip_data(irqd);
+	struct samsung_pinctrl_drv_data *d = bank->drvdata;
+	unsigned long bit = 1UL << bank->sysreg_cmgp_bit;
+	int i = 0;
+
+	regmap_update_bits(d->sysreg_cmgp, bank->sysreg_cmgp_offs, bit, bit);
+
+	bit = bank->eint_num;
+	pr_info("%s: bit = %d, bank->eint_num = %d, irqd->hwirq = %d",
+			__func__, bit, bank->eint_num, irqd->hwirq);
+	if (!on)
+		exynos_cmgp_eint_wake_mask_array_ul[BIT_WORD(bit)] |= BIT_MASK(bit);
+	else
+		exynos_cmgp_eint_wake_mask_array_ul[BIT_WORD(bit)] &= ~BIT_MASK(bit);
+
+	bitmap_to_arr32(exynos_cmgp_eint_wake_mask_array,
+			exynos_cmgp_eint_wake_mask_array_ul,
+			EXYNOS_EINT_WKUP_MASK_NUM * 32);
+
+	dev_info(d->dev, "wake %s for irq %d\n", on ? "enabled" : "disabled",
+		 irqd->irq);
+	dev_info(d->dev, "(%s:0x%x) dirq = %d, eint_num = %u\n",
+		 bank->name, bank->eint_offset, d->irq, bank->eint_num);
+
+	for (i = 0; i < EXYNOS_EINT_WKUP_MASK_NUM; i++)
+		dev_info(d->dev, "exynos_cmgp_eint_wake_mask value index %d = (0x%X)\n",
+		i, exynos_cmgp_eint_wake_mask_array[i]);
 
 	return 0;
 }
@@ -455,6 +567,25 @@ static const struct exynos_irq_chip exynos7_wkup_irq_chip __initconst = {
 	.set_eint_wakeup_mask = exynos_pinctrl_set_eint_wakeup_mask,
 };
 
+static const struct exynos_irq_chip exynos_cmgp_wkup_irq_chip __initconst = {
+	.chip = {
+		.name = "exynos_cmgp_wkup_irq_chip",
+		.irq_unmask = exynos_irq_unmask,
+		.irq_mask = exynos_irq_mask,
+		.irq_ack = exynos_irq_ack,
+		.irq_set_type = exynos_irq_set_type,
+		.irq_set_wake = exynos_cmgp_wkup_irq_set_wake,
+		.irq_request_resources = exynos_irq_request_resources,
+		.irq_release_resources = exynos_irq_release_resources,
+	},
+	.eint_con = EXYNOS7_WKUP_ECON_OFFSET,
+	.eint_mask = EXYNOS7_WKUP_EMASK_OFFSET,
+	.eint_pend = EXYNOS7_WKUP_EPEND_OFFSET,
+	.eint_wake_mask_value = EXYNOS_EINT_WAKEUP_MASK_DISABLED,
+	.eint_wake_mask_reg = EXYNOS5433_EINT_CMGP_WAKEUP_MASK,
+	.set_eint_wakeup_mask = exynos_pinctrl_set_eint_wakeup_mask,
+};
+
 /* list of external wakeup controllers supported */
 static const struct of_device_id exynos_wkup_irq_ids[] = {
 	{ .compatible = "samsung,s5pv210-wakeup-eint",
@@ -463,6 +594,8 @@ static const struct of_device_id exynos_wkup_irq_ids[] = {
 			.data = &exynos4210_wkup_irq_chip },
 	{ .compatible = "samsung,exynos7-wakeup-eint",
 			.data = &exynos7_wkup_irq_chip },
+	{ .compatible = "samsung,exynos-cmgp-wakeup-eint",
+			.data = &exynos_cmgp_wkup_irq_chip },
 	{ }
 };
 
@@ -517,6 +650,8 @@ static void exynos_irq_demux_eint16_31(struct irq_desc *desc)
 	chained_irq_exit(chip, desc);
 }
 
+
+static int eint_num;
 /*
  * exynos_eint_wkup_init() - setup handling of external wakeup interrupts.
  * @d: driver data of samsung pinctrl driver.
@@ -533,6 +668,8 @@ int exynos_eint_wkup_init(struct samsung_pinctrl_drv_data *d)
 	unsigned int muxed_banks = 0;
 	unsigned int i;
 	int idx, irq;
+	unsigned int interrupts_index[EXYNOS_EINT_MAX_PER_BANK];
+	int interrupts_size, interrupt_idx;
 
 	for_each_child_of_node(dev->of_node, np) {
 		const struct of_device_id *match;
@@ -557,6 +694,11 @@ int exynos_eint_wkup_init(struct samsung_pinctrl_drv_data *d)
 		if (bank->eint_type != EINT_TYPE_WKUP)
 			continue;
 
+		/* Only alive block has filter selection register. */
+		/* Setting Digital Filter */
+		exynos_eint_flt_config(EXYNOS_EINT_FLTCON_EN,
+				       EXYNOS_EINT_FLTCON_SEL, 0, d, bank);
+
 		bank->irq_domain = irq_domain_add_linear(bank->of_node,
 				bank->nr_pins, &exynos_eint_irqd_ops, bank);
 		if (!bank->irq_domain) {
@@ -566,6 +708,8 @@ int exynos_eint_wkup_init(struct samsung_pinctrl_drv_data *d)
 		}
 
 		bank->irq_chip = irq_chip;
+		bank->eint_num = eint_num;
+		eint_num = eint_num + bank->nr_pins;
 
 		if (!of_find_property(bank->of_node, "interrupts", NULL)) {
 			bank->eint_type = EINT_TYPE_WKUP_MUX;
@@ -581,19 +725,51 @@ int exynos_eint_wkup_init(struct samsung_pinctrl_drv_data *d)
 			return -ENOMEM;
 		}
 
-		for (idx = 0; idx < bank->nr_pins; ++idx) {
-			irq = irq_of_parse_and_map(bank->of_node, idx);
-			if (!irq) {
-				dev_err(dev, "irq number for eint-%s-%d not found\n",
-							bank->name, idx);
-				continue;
+		interrupts_size = of_property_read_variable_u32_array(bank->of_node,
+				"interrupts-index", interrupts_index, 0, bank->nr_pins);
+
+		if (interrupts_size > 0) {
+			for (idx = 0; idx < interrupts_size; ++idx) {
+				interrupt_idx = interrupts_index[idx];
+				irq = irq_of_parse_and_map(bank->of_node, idx);
+				if (!irq) {
+					dev_err(dev, "irq number for eint-%s-%d not found\n",
+								bank->name, interrupt_idx);
+					continue;
+				}
+				weint_data[interrupt_idx].irq = interrupt_idx;
+				weint_data[interrupt_idx].bank = bank;
+				irq_set_chained_handler_and_data(irq,
+								 exynos_irq_eint0_15,
+								 &weint_data[interrupt_idx]);
 			}
-			weint_data[idx].irq = idx;
-			weint_data[idx].bank = bank;
-			irq_set_chained_handler_and_data(irq,
-							 exynos_irq_eint0_15,
-							 &weint_data[idx]);
+		} else {
+			for (idx = 0; idx < bank->nr_pins; ++idx) {
+				irq = irq_of_parse_and_map(bank->of_node, idx);
+				if (!irq) {
+					dev_err(dev, "irq number for eint-%s-%d not found\n",
+								bank->name, idx);
+					continue;
+				}
+				weint_data[idx].irq = idx;
+				weint_data[idx].bank = bank;
+				irq_set_chained_handler_and_data(irq,
+								 exynos_irq_eint0_15,
+								 &weint_data[idx]);
+			}
 		}
+	}
+
+	/* Initialize to 0 to find the base of wakeup source
+	 * other than ALIVE GPIO.
+	 */
+	eint_num = 0;
+
+	d->sysreg_cmgp = syscon_regmap_lookup_by_phandle(dev->of_node,
+			"samsung,syscon-phandle");
+	if (IS_ERR(d->sysreg_cmgp)) {
+		dev_info(dev, "sysreg_cmgp is not registered\n");
+		d->sysreg_cmgp = 0;
 	}
 
 	if (!muxed_banks) {
@@ -636,18 +812,22 @@ static void exynos_pinctrl_suspend_bank(
 	struct exynos_eint_gpio_save *save = bank->soc_priv;
 	void __iomem *regs = bank->eint_base;
 
-	save->eint_con = readl(regs + EXYNOS_GPIO_ECON_OFFSET
-						+ bank->eint_offset);
-	save->eint_fltcon0 = readl(regs + EXYNOS_GPIO_EFLTCON_OFFSET
-						+ 2 * bank->eint_offset);
-	save->eint_fltcon1 = readl(regs + EXYNOS_GPIO_EFLTCON_OFFSET
-						+ 2 * bank->eint_offset + 4);
-	save->eint_mask = readl(regs + bank->irq_chip->eint_mask
-						+ bank->eint_offset);
+	save->eint_con = readl(regs + EXYNOS_GPIO_ECON_OFFSET +
+			       bank->eint_offset);
+
+	save->eint_fltcon0 = readl(regs + EXYNOS_GPIO_EFLTCON_OFFSET +
+				   bank->fltcon_offset);
+	if (bank->nr_pins > 4)
+		save->eint_fltcon1 = readl(regs + EXYNOS_GPIO_EFLTCON_OFFSET +
+					   bank->fltcon_offset + 4);
+	save->eint_mask = readl(regs + bank->irq_chip->eint_mask +
+				bank->eint_offset);
 
 	pr_debug("%s: save     con %#010x\n", bank->name, save->eint_con);
 	pr_debug("%s: save fltcon0 %#010x\n", bank->name, save->eint_fltcon0);
-	pr_debug("%s: save fltcon1 %#010x\n", bank->name, save->eint_fltcon1);
+	if (bank->nr_pins > 4)
+		pr_debug("%s: save fltcon1 %#010x\n", bank->name,
+			 save->eint_fltcon1);
 	pr_debug("%s: save    mask %#010x\n", bank->name, save->eint_mask);
 }
 
@@ -655,12 +835,18 @@ void exynos_pinctrl_suspend(struct samsung_pinctrl_drv_data *drvdata)
 {
 	struct samsung_pin_bank *bank = drvdata->pin_banks;
 	struct exynos_irq_chip *irq_chip = NULL;
+	struct samsung_pinctrl_drv_data *d = bank->drvdata;
 	int i;
 
 	for (i = 0; i < drvdata->nr_banks; ++i, ++bank) {
 		if (bank->eint_type == EINT_TYPE_GPIO)
 			exynos_pinctrl_suspend_bank(drvdata, bank);
-		else if (bank->eint_type == EINT_TYPE_WKUP) {
+		else if (bank->eint_type == EINT_TYPE_WKUP ||
+			bank->eint_type == EINT_TYPE_WKUP_MUX) {
+			/* Setting Analog Filter */
+			exynos_eint_flt_config(EXYNOS_EINT_FLTCON_EN,
+					       0, 0, d, bank);
+
 			if (!irq_chip) {
 				irq_chip = bank->irq_chip;
 				irq_chip->set_eint_wakeup_mask(drvdata,
@@ -682,36 +868,50 @@ static void exynos_pinctrl_resume_bank(
 	void __iomem *regs = bank->eint_base;
 
 	pr_debug("%s:     con %#010x => %#010x\n", bank->name,
-			readl(regs + EXYNOS_GPIO_ECON_OFFSET
-			+ bank->eint_offset), save->eint_con);
+			readl(regs + EXYNOS_GPIO_ECON_OFFSET +
+			      bank->eint_offset), save->eint_con);
 	pr_debug("%s: fltcon0 %#010x => %#010x\n", bank->name,
-			readl(regs + EXYNOS_GPIO_EFLTCON_OFFSET
-			+ 2 * bank->eint_offset), save->eint_fltcon0);
-	pr_debug("%s: fltcon1 %#010x => %#010x\n", bank->name,
-			readl(regs + EXYNOS_GPIO_EFLTCON_OFFSET
-			+ 2 * bank->eint_offset + 4), save->eint_fltcon1);
+			readl(regs + EXYNOS_GPIO_EFLTCON_OFFSET +
+			      bank->fltcon_offset), save->eint_fltcon0);
+	if (bank->nr_pins > 4) {
+		pr_debug("%s: fltcon1 %#010x => %#010x\n", bank->name,
+			readl(regs + EXYNOS_GPIO_EFLTCON_OFFSET +
+			      bank->fltcon_offset + 4), save->eint_fltcon1);
+	}
 	pr_debug("%s:    mask %#010x => %#010x\n", bank->name,
 			readl(regs + bank->irq_chip->eint_mask
 			+ bank->eint_offset), save->eint_mask);
 
-	writel(save->eint_con, regs + EXYNOS_GPIO_ECON_OFFSET
-						+ bank->eint_offset);
-	writel(save->eint_fltcon0, regs + EXYNOS_GPIO_EFLTCON_OFFSET
-						+ 2 * bank->eint_offset);
-	writel(save->eint_fltcon1, regs + EXYNOS_GPIO_EFLTCON_OFFSET
-						+ 2 * bank->eint_offset + 4);
-	writel(save->eint_mask, regs + bank->irq_chip->eint_mask
-						+ bank->eint_offset);
+	writel(save->eint_con, regs + EXYNOS_GPIO_ECON_OFFSET +
+	       bank->eint_offset);
+	writel(save->eint_fltcon0, regs + EXYNOS_GPIO_EFLTCON_OFFSET +
+		bank->fltcon_offset);
+	if (bank->nr_pins > 4) {
+		writel(save->eint_fltcon1, regs + EXYNOS_GPIO_EFLTCON_OFFSET +
+		       bank->fltcon_offset + 4);
+	}
+	writel(save->eint_mask, regs + bank->irq_chip->eint_mask +
+	       bank->eint_offset);
 }
 
 void exynos_pinctrl_resume(struct samsung_pinctrl_drv_data *drvdata)
 {
 	struct samsung_pin_bank *bank = drvdata->pin_banks;
+	struct samsung_pinctrl_drv_data *d = bank->drvdata;
 	int i;
 
-	for (i = 0; i < drvdata->nr_banks; ++i, ++bank)
-		if (bank->eint_type == EINT_TYPE_GPIO)
+	for (i = 0; i < drvdata->nr_banks; ++i, ++bank) {
+		if (bank->eint_type == EINT_TYPE_GPIO) {
 			exynos_pinctrl_resume_bank(drvdata, bank);
+		} else if (bank->eint_type == EINT_TYPE_WKUP ||
+			bank->eint_type == EINT_TYPE_WKUP_MUX) {
+			/* Only alive block has filter selection register. */
+			/* Setting Digital Filter */
+			exynos_eint_flt_config(EXYNOS_EINT_FLTCON_EN,
+					       EXYNOS_EINT_FLTCON_SEL, 0, d,
+					       bank);
+		}
+	}
 }
 
 static void exynos_retention_enable(struct samsung_pinctrl_drv_data *drvdata)

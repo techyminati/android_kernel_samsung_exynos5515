@@ -13,6 +13,9 @@
 #include <linux/device.h>
 #include <linux/mod_devicetable.h>
 
+#define MAX_CNT_U64     0xFFFFFFFFFF
+#define MAX_CNT_U32     0x7FFFFFFF
+
 struct mmc_cid {
 	unsigned int		manfid;
 	char			prod_name[8];

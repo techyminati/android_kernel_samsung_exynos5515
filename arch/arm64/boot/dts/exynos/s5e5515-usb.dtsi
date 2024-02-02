@@ -1,0 +1,125 @@
+/*
+ * Samsung's Exynos2100 SoC USB device tree source
+ *
+ * Copyright (c) 2020 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * Samsung's Exynos2100 SoC USB channels are listed as device
+ * tree nodes are listed in this file.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include <dt-bindings/interrupt-controller/s5e5515.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+/ {
+/*
+	sysreg_hsi0: sysreg_hsi0@10A20000 {
+		compatible = "samsung,sysreg-hsi0", "syscon";
+		reg = <0x0 0x10A20000 0x10000>;
+	};
+*/
+
+	udc: usb@10600000 {
+		compatible = "samsung,exynos-dwusb";
+		clocks = <&clock GATE_USB20DRD_TOP_QCH_LINK>,
+			<&clock GATE_USB20DRD_TOP_QCH_20CTRL>,
+			<&clock GATE_DMYUSB20DRD_TOP_QCH_REFCLK>;
+		clock-names = "hsdrd", "hsctrl", "refclk";
+		reg = <0x0 0x10600000 0x10000>;
+		#address-cells = <2>;
+		#size-cells = <1>;
+		ranges;
+		status = "disabled";
+
+		usbdrd_dwc3: dwc3 {
+			compatible = "synopsys,dwc3";
+			reg = <0x0 0x10600000 0x10000>;
+			interrupts = <0 129 IRQ_TYPE_LEVEL_HIGH>;
+			//suspend_clk_freq = <66000000>;
+			tx-fifo-resize = <0>;
+			adj-sof-accuracy = <0>;
+			is_not_vbus_pad = <1>;
+			enable_sprs_transfer = <1>;
+			qos_int_level = <100000 200000>;
+			phys = <&usbdrd_phy 0>, <&usbdrd_phy 1>;
+			phy-names = "usb2-phy", "usb3-phy";
+			/* check susphy support */
+			xhci_l2_support = <0>;
+			/* support usb audio offloading: 1, if not: 0 */
+			usb_audio_offloading = <0>;
+			/* don't support USB L2 sleep */
+			ldos = <0>;
+			/*
+			 * dis-u2-freeclk-exists-quirk, dis_u2_susphy_quirk are alternative.
+			 * One of them should be selected
+			 */
+			snps,dis-u2-freeclk-exists-quirk;
+			/* snps,dis_u2_susphy_quirk; */
+		};
+	};
+
+	usbdrd_phy: phy@10520000 {
+		compatible = "samsung,exynos-usbdrd-phy";
+		reg = <0x0 0x10520000 0x200>;
+		clocks = <&clock GATE_USB20DRD_TOP_QCH_LINK>,
+			<&clock GATE_USB20DRD_TOP_QCH_20CTRL>,
+			<&clock GATE_DMYUSB20DRD_TOP_QCH_REFCLK>,
+			<&clock OSCCLK>;
+		clock-names = "hsdrd", "hsctrl", "refclk", "oscclk";
+		samsung,pmu-syscon = <&pmu_system_controller>;
+		pmu_mask = <0x0>;
+		pmu_offset = <0x72C>;
+		//pmu_offset_dp = <0x66c>;
+
+		/* USBDP combo phy version  - 0x200 */
+		phy_version = <0x300>;
+		/* if it doesn't need phy user mux, */
+		/*  you should write "none" */
+		/*  but refclk shouldn't be omitted */
+		phyclk_mux = "none";
+		phy_refclk = "oscclk";
+
+		/* if Main phy has the other phy, it must be set to 1. jusf for usbphy_info */
+		has_other_phy = <0>;
+		/* if combo phy is used, it must be set to 1. usbphy_sub_info is enabled */
+		has_combo_phy = <0>;
+		sub_phy_version = <0x300>;
+
+		/* ip type */
+		/* USB3DRD = 0 */
+		/*  USB3HOST = 1 */
+		/*  USB2DRD = 2 */
+		/*  USB2HOST = 3 */
+		ip_type = <0x0>;
+
+		/* for PHY CAL */
+		/* choice only one item */
+		phy_refsel_clockcore = <1>;
+		phy_refsel_ext_osc = <0>;
+		phy_refsel_xtal = <0>;
+		phy_refsel_diff_pad = <0>;
+		phy_refsel_diff_internal = <0>;
+		phy_refsel_diff_single = <0>;
+
+		/* true : 1 , false : 0 */
+		use_io_for_ovc = <0>;
+		common_block_disable = <1>;
+		is_not_vbus_pad = <1>;
+		used_phy_port = <0>;
+
+		status = "disabled";
+
+		#phy-cells = <1>;
+		ranges;
+	};
+
+	usb_notifier {
+		compatible = "samsung,usb-notifier";
+		udc = <&udc>;
+	};
+
+};

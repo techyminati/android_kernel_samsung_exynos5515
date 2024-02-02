@@ -1,0 +1,161 @@
+// SPDX-License-Identifier: GPL-2.0-only
+//
+// Samsung's SoC MMC device tree source
+//
+// Copyright (C) 2020 Samsung Electronics Co., Ltd
+
+/{
+	aliases {
+		mshc0 = &dwmmc_0;
+		mshc2 = &dwmmc_2;
+	};
+
+	dwmmc_0: dwmmc0@10500000 {
+		 compatible = "samsung,exynos-dw-mshc";
+		 reg = <0x0 0x10500000 0x2000>,
+		    <0x0 0x10508000 0x200>;
+		 reg-names = "dw_mmc",
+			"cqhci_mem";
+		 interrupts = <0 INTREQ__MMC_EMBD IRQ_TYPE_LEVEL_HIGH>;
+		 #address-cells = <1>;
+		 #size-cells = <0>;
+		 clocks = <&clock FSYS_MMC_EMBD>, <&clock GATE_MMC_CARD_QCH>;
+		 clock-names = "ciu", "ciu_gate";
+		 fmp-id = <0>;
+		 smu-id = <0>;
+		 status = "okay";
+		 num-slots = <1>;
+		 broken-cd;
+		 fixed_voltage;
+		 supports-highspeed;
+		 mmc-ddr-1_8v;
+		 mmc-hs200-1_8v;
+		 mmc-hs400-1_8v;
+		 mmc-hs400-enhanced-strobe;
+		 supports-8bit;
+		 supports-cmd23;
+		 full-pwr-cycle;
+		 supports-erase;
+		 support-cmdq;
+		 support-cmd-logging;
+		 extended-tmout;
+		 card-init-hwacg-ctrl;
+		 mmc-inline-crypt;
+		 enable-ulp-mode;
+		 fifo-depth = <0x40>;
+		 qos-dvfs-level = <167000>;
+		 non-removable;
+		 desc-size = <4>;
+		 card-detect-delay = <200>;
+		 data-timeout = <500>;
+		 hto-timeout = <80>;
+		 emmc-pwr-suspend = <1>;
+		 emmc-dis-charge-time = <50>;
+		 samsung,dw-mshc-ciu-div = <3>;
+		 samsung,dw-mshc-txdt-crc-timer-fastlimit = <0x34>;
+		 samsung,dw-mshc-txdt-crc-timer-initval = <0x38>;
+		 samsung,dw-mshc-hs400-delay-line = <0x60>;
+		 samsung,dw-mshc-sdr-timing = <3 0 4 0>;
+		 samsung,dw-mshc-ddr-timing = <3 0 4 2>;
+		 samsung,dw-mshc-hs200-timing = <3 0 3 0>;
+		 samsung,dw-mshc-hs400-timing = <1 0 4 0>;
+		 samsung,dw-mshc-hs400-ulp-timing = <3 0 2 0>;
+
+		 num-ref-clks = <12>;
+		 ciu_clkin = <25 50 50 25 50 100 200 50 50 200 200 200>;
+
+		 clk-drive-number = <4>;
+		 pinctrl-names = "default",
+			 "fast-slew-rate-1x",
+			 "fast-slew-rate-2x",
+			 "fast-slew-rate-3x",
+			 "fast-slew-rate-4x",
+			 "pdn-default";
+		 pinctrl-0 = <&sd0_clk &sd0_cmd &sd0_rdqs &sd0_hwrst &sd0_bus1 &sd0_bus4 &sd0_bus8>;
+		 pinctrl-1 = <&sd0_clk_fast_slew_rate_1x>;
+		 pinctrl-2 = <&sd0_clk_fast_slew_rate_2x>;
+		 pinctrl-3 = <&sd0_clk_fast_slew_rate_3x>;
+		 pinctrl-4 = <&sd0_clk_fast_slew_rate_4x>;
+		 pinctrl-5 = <&sd0_pdn_clk &sd0_pdn_cmd &sd0_pdn_rdqs
+			 &sd0_pdn_hwrst &sd0_pdn_bus1 &sd0_pdn_bus4 &sd0_pdn_bus8>;
+		 slot@0 {
+			 reg = <0>;
+			 bus-width = <8>;
+		 };
+	 };
+
+	dwmmc_2: dwmmc2@10510000 {
+		compatible = "samsung,exynos-dw-mshc";
+		reg = <0x0 0x10510000 0x2000>;
+		reg-names = "dw_mmc";
+		interrupts = <0 INTREQ__MMC_CARD IRQ_TYPE_LEVEL_HIGH>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&clock FSYS_MMC_CARD>, <&clock GATE_MMC_CARD_QCH>;
+		clock-names = "ciu", "ciu_gate";
+	    status = "disabled";
+	    num-slots = <1>;
+	    broken-cd;
+	    cd-type-external;
+	    cap-sd-highspeed;
+	    cap-mmc-highspeed;
+	    supports-4bit;
+	    //supports-cmd23;
+	    //supports-erase;
+	    sd-uhs-sdr25;
+	    //sd-uhs-sdr50;
+	    //sd-uhs-sdr104;
+	    //card-detect-gpio;
+	    //enable-sdio-wakeup;
+	    //bypass-smu;
+	    bypass-for-allpass;
+	    use-fine-tuning;
+	    card-init-hwacg-ctrl;
+	    only_once_tune;
+	    //skip-init-mmc-scan;
+	    ignore-phase = <(1 << 7)>;
+	    fifo-depth = <0x40>;
+	    desc-size = <4>;
+	    card-detect-delay = <200>;
+	    data-timeout = <200>;
+	    hto-timeout = <80>;
+	    samsung,dw-mshc-ciu-div = <3>;
+	    clock-frequency = <50000000>;
+	    samsung,dw-mshc-sdr-timing = <3 0 2 0>;
+	    samsung,dw-mshc-ddr-timing = <3 0 2 1>;
+	    //samsung,dw-mshc-sdr50-timing = <3 0 4 2>;
+	    //samsung,dw-mshc-sdr104-timing = <3 0 3 0>;
+        
+	    tp_mon_depth = <2>;
+	    /* Byte/s,  MIF clk, CPU clk */
+	    tp_mon_table = <3145728 1539000 1144000
+	    			 0       0       0>;
+        
+	    num-ref-clks = <9>;
+	    ciu_clkin = <25 50 50 25 50 100 200 50 50>;
+        
+	    clk-drive-number = <4>;
+	    pinctrl-names = "init",
+	    	"fast-slew-rate-1x",
+	    	"fast-slew-rate-2x",
+	    	"fast-slew-rate-3x",
+	    	"fast-slew-rate-4x",
+	    	"sdio_wifi_on",
+	    	"sdio_wifi_off";
+	    pinctrl-0 = <&sd2_clk &sd2_cmd &sd2_bus1 &sd2_bus4 &cfg_wlanen &cfg_wlanhostwake>;
+	    pinctrl-1 = <&sd2_clk_fast_slew_rate_1x>;
+	    pinctrl-2 = <&sd2_clk_fast_slew_rate_2x>;
+	    pinctrl-3 = <&sd2_clk_fast_slew_rate_3x>;
+	    pinctrl-4 = <&sd2_clk_fast_slew_rate_4x>;
+	    pinctrl-5 = <&sd2_clk_wifi_on &sd2_cmd_bus_wifi_on>;
+	    pinctrl-6 = <&sd2_clk_wifi_off &sd2_cmd_bus_wifi_off>;
+        
+	    //card-detect = <&gpa0 3 0xf>;
+        
+	    slot@0 {
+	    	reg = <0>;
+	    	bus-width = <4>;
+	    	disable-wp;
+	    };
+	};
+};

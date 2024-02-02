@@ -1,0 +1,7 @@
+#
+# Mobicore Configuration
+#
+
+if SOC_S5E5515
+source "drivers/gud/gud-s5e5515/Kconfig"
+endif

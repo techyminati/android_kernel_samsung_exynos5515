@@ -47,6 +47,7 @@
 #define EXYNOS_EINT_WAKEUP_MASK			0x0604
 #define S5P_WAKEUP_MASK				0x0608
 #define S5P_WAKEUP_MASK2				0x0614
+#define EXYNOS5433_EINT_CMGP_WAKEUP_MASK			(0x062C)
 
 /* MIPI_PHYn_CONTROL, valid for Exynos3250, Exynos4, Exynos5250 and Exynos5433 */
 #define EXYNOS4_MIPI_PHY_CONTROL(n)		(0x0710 + (n) * 4)

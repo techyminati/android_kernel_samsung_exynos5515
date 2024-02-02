@@ -59,6 +59,10 @@
 	.endr
 	.endm
 
+#ifdef CONFIG_SEC_DEBUG_EXCEPTION_STACK
+#define PRESERVE_STACK_SIZE	256
+#endif
+
 /*
  * Bad Abort numbers
  *-----------------
@@ -83,7 +87,15 @@ alternative_if ARM64_UNMAP_KERNEL_AT_EL0
 alternative_else_nop_endif
 #endif
 
+#ifdef CONFIG_SEC_DEBUG_EXCEPTION_STACK
+	.if	\el == 0
 	sub	sp, sp, #S_FRAME_SIZE
+	.else
+	sub	sp, sp, #(S_FRAME_SIZE+PRESERVE_STACK_SIZE)
+	.endif /* \el == 0 */
+#else
+	sub	sp, sp, #S_FRAME_SIZE
+#endif
 #ifdef CONFIG_VMAP_STACK
 	/*
 	 * Test whether the SP has overflowed, without corrupting a GPR.
@@ -188,7 +200,11 @@ alternative_cb_end
 	str	xzr, [tsk, #TSK_TI_SCS]		// Limit visibility of saved SCS
 #endif
 	.else
+#ifdef CONFIG_SEC_DEBUG_EXCEPTION_STACK
+	add	x21, sp, #(S_FRAME_SIZE+PRESERVE_STACK_SIZE)
+#else
 	add	x21, sp, #S_FRAME_SIZE
+#endif
 	get_thread_info tsk
 	/* Save the task's original addr_limit and set USER_DS */
 	ldr	x20, [tsk, #TSK_TI_ADDR_LIMIT]
@@ -353,7 +369,15 @@ alternative_else_nop_endif
 	ldp	x26, x27, [sp, #16 * 13]
 	ldp	x28, x29, [sp, #16 * 14]
 	ldr	lr, [sp, #S_LR]
+#ifdef CONFIG_SEC_DEBUG_EXCEPTION_STACK
+	.if	\el == 0
 	add	sp, sp, #S_FRAME_SIZE		// restore sp
+	.else
+	add	sp, sp, #(S_FRAME_SIZE+PRESERVE_STACK_SIZE)
+	.endif /* \el == 0 */
+#else
+	add	sp, sp, #S_FRAME_SIZE		// restore sp
+#endif
 	/*
 	 * ARCH_HAS_MEMBARRIER_SYNC_CORE rely on eret context synchronization
 	 * when returning from IPI handler, and when returning to user-space.
@@ -495,7 +519,11 @@ __bad_stack:
 	sub	sp, sp, #S_FRAME_SIZE
 	kernel_entry 1
 	mrs	x0, tpidr_el0
+#ifdef CONFIG_SEC_DEBUG_EXCEPTION_STACK
+	add	x0, x0, #(S_FRAME_SIZE+PRESERVE_STACK_SIZE)
+#else
 	add	x0, x0, #S_FRAME_SIZE
+#endif
 	str	x0, [sp, #S_SP]
 
 	/* Stash the regs for handle_bad_stack */

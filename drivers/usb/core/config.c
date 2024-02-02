@@ -268,6 +268,48 @@ static int usb_parse_endpoint(struct device *ddev, int cfgno,
 	buffer += d->bLength;
 	size -= d->bLength;
 
+	if (( d->bmAttributes & 0x3 ) == 0x1) {
+		if ((d->bmAttributes & 0x30) == 0x00) {
+			/* Data Stream Endpoint only */
+			if (d->bEndpointAddress & USB_ENDPOINT_DIR_MASK) {
+				to_usb_device(ddev)->hwinfo.in_ep =
+					d->bEndpointAddress;
+				dev_info(ddev, " This is IN ISO endpoint #0%x 0x%p\n",
+					d->bEndpointAddress, d->bSynchAddress);
+				if ((d->bLength > 7) && (d->bSynchAddress != 0x0)) {
+					to_usb_device(ddev)->hwinfo.fb_out_ep =
+						d->bSynchAddress;
+					dev_info(ddev, "Feedback IN ISO endpoint #0%x 0x%p\n",
+						d->bEndpointAddress, d->bSynchAddress);
+				}
+			} else {
+				to_usb_device(ddev)->hwinfo.out_ep =
+					d->bEndpointAddress;
+				dev_info(ddev, " This is OUT ISO endpoint #0%x 0x%p\n",
+					d->bEndpointAddress, d->bSynchAddress);
+				if ((d->bLength > 7) && (d->bSynchAddress != 0x0)) {
+					to_usb_device(ddev)->hwinfo.fb_in_ep =
+						d->bSynchAddress;
+					dev_info(ddev, "Feedback IN ISO endpoint #0%x 0x%p\n",
+						d->bEndpointAddress, d->bSynchAddress);
+				}
+			}
+		} else {
+			/* Feedback or implict feedback data endpoint */
+			if (d->bEndpointAddress & USB_ENDPOINT_DIR_MASK) {
+				to_usb_device(ddev)->hwinfo.fb_in_ep =
+					d->bEndpointAddress;
+				dev_info(ddev, "Feedback IN ISO endpoint #0%x 0x%p\n",
+					d->bEndpointAddress, d->bSynchAddress);
+			} else {
+				to_usb_device(ddev)->hwinfo.fb_out_ep =
+					d->bEndpointAddress;
+				dev_info(ddev, "Feedback OUT ISO endpoint #0%x 0x%p\n",
+					d->bEndpointAddress, d->bSynchAddress);
+			}
+		}
+	}
+
 	if (d->bLength >= USB_DT_ENDPOINT_AUDIO_SIZE)
 		n = USB_DT_ENDPOINT_AUDIO_SIZE;
 	else if (d->bLength >= USB_DT_ENDPOINT_SIZE)
@@ -606,7 +648,7 @@ skip_to_next_interface_descriptor:
 	return buffer - buffer0 + i;
 }
 
-static int usb_parse_configuration(struct usb_device *dev, int cfgidx,
+int usb_parse_configuration(struct usb_device *dev, int cfgidx,
     struct usb_host_config *config, unsigned char *buffer, int size)
 {
 	struct device *ddev = &dev->dev;
@@ -932,6 +974,12 @@ int usb_get_configuration(struct usb_device *dev)
 		if (dev->quirks & USB_QUIRK_DELAY_INIT)
 			msleep(200);
 
+		dev->do_remote_wakeup =
+			(desc->bmAttributes & USB_CONFIG_ATT_WAKEUP) ? 1 : 0;
+		if (dev->do_remote_wakeup == 1) {
+			device_init_wakeup(ddev, 1);
+		}
+
 		result = usb_get_descriptor(dev, USB_DT_CONFIG, cfgno,
 		    bigbuffer, length);
 		if (result < 0) {
@@ -947,6 +995,7 @@ int usb_get_configuration(struct usb_device *dev)
 		}
 
 		dev->rawdescriptors[cfgno] = bigbuffer;
+		dev->rawdesc_length = length;
 
 		result = usb_parse_configuration(dev, cfgno,
 		    &dev->config[cfgno], bigbuffer, length);

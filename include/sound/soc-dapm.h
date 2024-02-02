@@ -169,6 +169,12 @@ struct device;
 	SND_SOC_DAPM_INIT_REG_VAL(wreg, wshift, winvert), \
 	.kcontrol_news = wcontrols, .num_kcontrols = 1, \
 	.event = wevent, .event_flags = wflags}
+#define SND_SOC_DAPM_DEMUX_E(wname, wreg, wshift, winvert, wcontrols, \
+		wevent, wflags) \
+{       .id = snd_soc_dapm_demux, .name = wname, \
+	SND_SOC_DAPM_INIT_REG_VAL(wreg, wshift, winvert), \
+	.kcontrol_news = wcontrols, .num_kcontrols = 1, \
+	.event = wevent, .event_flags = wflags}
 
 /* additional sequencing control within an event type */
 #define SND_SOC_DAPM_PGA_S(wname, wsubseq, wreg, wshift, winvert, \
@@ -431,6 +437,12 @@ void snd_soc_dapm_reset_cache(struct snd_soc_dapm_context *dapm);
 void snd_soc_dapm_stream_event(struct snd_soc_pcm_runtime *rtd, int stream,
 	int event);
 void snd_soc_dapm_shutdown(struct snd_soc_card *card);
+
+int snd_soc_dapm_connected_output_ep(struct snd_soc_dapm_widget *widget,
+		struct list_head *list);
+
+int snd_soc_dapm_connected_input_ep(struct snd_soc_dapm_widget *widget,
+		struct list_head *list);
 
 /* external DAPM widget events */
 int snd_soc_dapm_mixer_update_power(struct snd_soc_dapm_context *dapm,

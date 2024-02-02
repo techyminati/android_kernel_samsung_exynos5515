@@ -323,6 +323,12 @@ int mmc_of_parse(struct mmc_host *host)
 		host->caps2 |= MMC_CAP2_NO_SD;
 	if (device_property_read_bool(dev, "no-mmc"))
 		host->caps2 |= MMC_CAP2_NO_MMC;
+	if (device_property_read_bool(dev, "skip-init-no-tray"))
+		host->caps2 |= MMC_CAP2_SKIP_INIT_NOT_TRAY;
+	if (device_property_read_bool(dev, "skip-init-mmc-scan"))
+		host->caps2 |= MMC_CAP2_SKIP_INIT_SCAN;
+	if (device_property_read_bool(dev, "mmc-inline-crypt"))
+		host->caps2 |= MMC_CAP2_CRYPTO;
 
 	/* Must be after "non-removable" check */
 	if (device_property_read_u32(dev, "fixed-emmc-driver-type", &drv_type) == 0) {
@@ -386,11 +392,19 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 
 	if (mmc_gpio_alloc(host)) {
 		put_device(&host->class_dev);
+		ida_simple_remove(&mmc_host_ida, host->index);
+		kfree(host);
 		return NULL;
 	}
 
 	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
+	host->wlock_name = kasprintf(GFP_KERNEL,
+			"%s_detect", mmc_hostname(host));
+	host->detect_wake_lock = *wakeup_source_register(&host->class_dev, host->wlock_name);
+	if (&host->detect_wake_lock == NULL)
+		dev_info(host->parent, "wakelock register fail\n");
+
 	INIT_DELAYED_WORK(&host->detect, mmc_rescan);
 	INIT_DELAYED_WORK(&host->sdio_irq_work, sdio_irq_work);
 	timer_setup(&host->retune_timer, mmc_retune_timer, 0);
@@ -483,6 +497,7 @@ void mmc_free_host(struct mmc_host *host)
 {
 	mmc_crypto_free_host(host);
 	mmc_pwrseq_free(host);
+	wakeup_source_unregister(&host->detect_wake_lock);
 	put_device(&host->class_dev);
 }
 

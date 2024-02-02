@@ -15,6 +15,8 @@
 #include <asm/switch_to.h>
 #include <asm/tlb.h>
 
+#include <linux/sec_debug.h>
+
 #include "../workqueue_internal.h"
 #include "../smpboot.h"
 
@@ -22,6 +24,7 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
+#include <soc/samsung/debug-snapshot.h>
 
 DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 
@@ -3909,7 +3912,7 @@ static noinline void __schedule_bug(struct task_struct *prev)
 	if (oops_in_progress)
 		return;
 
-	printk(KERN_ERR "BUG: scheduling while atomic: %s/%d/0x%08x\n",
+	pr_auto(ASL6, "BUG: scheduling while atomic: %s/%d/0x%08x\n",
 		prev->comm, prev->pid, preempt_count());
 
 	debug_show_held_locks(prev);
@@ -3926,6 +3929,9 @@ static noinline void __schedule_bug(struct task_struct *prev)
 		panic("scheduling while atomic\n");
 
 	dump_stack();
+#ifdef CONFIG_SEC_DEBUG_ATOMIC_SLEEP_PANIC
+	BUG();
+#endif
 	add_taint(TAINT_WARN, LOCKDEP_STILL_OK);
 }
 
@@ -4129,6 +4135,7 @@ static void __sched notrace __schedule(bool preempt)
 		rq_unlock_irq(rq, &rf);
 	}
 
+	dbg_snapshot_task(smp_processor_id(), rq->curr);
 	balance_callback(rq);
 }
 
@@ -5959,6 +5966,7 @@ void sched_show_task(struct task_struct *p)
 {
 	unsigned long free = 0;
 	int ppid;
+	char tg_path[SZ_32] = "";
 
 	if (!try_get_task_stack(p))
 		return;
@@ -5975,15 +5983,56 @@ void sched_show_task(struct task_struct *p)
 	if (pid_alive(p))
 		ppid = task_pid_nr(rcu_dereference(p->real_parent));
 	rcu_read_unlock();
-	printk(KERN_CONT "%5lu %5d %6d 0x%08lx\n", free,
+#if IS_ENABLED(CONFIG_SEC_DEBUG) && IS_ENABLED(CONFIG_CGROUP_SCHED)
+	cgroup_path(task_group(p)->css.cgroup, tg_path, sizeof(tg_path));
+#endif
+	printk(KERN_CONT "%5lu %5d %6d 0x%08lx %s\n", free,
 		task_pid_nr(p), ppid,
-		(unsigned long)task_thread_info(p)->flags);
+		(unsigned long)task_thread_info(p)->flags, tg_path);
 
 	print_worker_info(KERN_INFO, p);
+	secdbg_dtsk_print_info(p, false);
 	show_stack(p, NULL);
 	put_task_stack(p);
 }
 EXPORT_SYMBOL_GPL(sched_show_task);
+
+#ifdef CONFIG_SEC_DEBUG_AUTO_COMMENT
+void sched_show_task_auto_comment(struct task_struct *p)
+{
+	unsigned long free = 0;
+	int ppid;
+	char tg_path[SZ_32] = "";
+
+	if (!try_get_task_stack(p))
+		return;
+
+	pr_auto(ASL1, "%-15.15s %c", p->comm, task_state_to_char(p));
+
+	if (p->state == TASK_RUNNING)
+		printk(KERN_CONT "  running task    ");
+#ifdef CONFIG_DEBUG_STACK_USAGE
+	free = stack_not_used(p);
+#endif
+	ppid = 0;
+	rcu_read_lock();
+	if (pid_alive(p))
+		ppid = task_pid_nr(rcu_dereference(p->real_parent));
+	rcu_read_unlock();
+#if IS_ENABLED(CONFIG_SEC_DEBUG) && IS_ENABLED(CONFIG_CGROUP_SCHED)
+	cgroup_path(task_group(p)->css.cgroup, tg_path, sizeof(tg_path));
+#endif
+	printk(KERN_CONT "%5lu %5d %6d 0x%08lx %s\n", free,
+		task_pid_nr(p), ppid,
+		(unsigned long)task_thread_info(p)->flags, tg_path);
+
+	print_worker_info(KERN_AUTO ASL1, p);
+	secdbg_dtsk_print_info(p, false);
+	show_stack_auto_comment(p, NULL);
+	put_task_stack(p);
+}
+EXPORT_SYMBOL_GPL(sched_show_task_auto_comment);
+#endif /* CONFIG_SEC_DEBUG_AUTO_COMMENT */
 
 static inline bool
 state_filter_match(unsigned long state_filter, struct task_struct *p)
@@ -6820,7 +6869,7 @@ void ___might_sleep(const char *file, int line, int preempt_offset)
 	/* Save this before calling printk(), since that will clobber it: */
 	preempt_disable_ip = get_preempt_disable_ip(current);
 
-	printk(KERN_ERR
+	pr_auto(ASL6,
 		"BUG: sleeping function called from invalid context at %s:%d\n",
 			file, line);
 	printk(KERN_ERR
@@ -6841,6 +6890,9 @@ void ___might_sleep(const char *file, int line, int preempt_offset)
 		pr_cont("\n");
 	}
 	dump_stack();
+#ifdef CONFIG_SEC_DEBUG_ATOMIC_SLEEP_PANIC
+	BUG();
+#endif
 	add_taint(TAINT_WARN, LOCKDEP_STILL_OK);
 }
 EXPORT_SYMBOL(___might_sleep);

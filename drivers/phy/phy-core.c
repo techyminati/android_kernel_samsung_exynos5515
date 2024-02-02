@@ -153,9 +153,6 @@ int phy_pm_runtime_get(struct phy *phy)
 {
 	int ret;
 
-	if (!phy)
-		return 0;
-
 	if (!pm_runtime_enabled(&phy->dev))
 		return -ENOTSUPP;
 
@@ -171,9 +168,6 @@ int phy_pm_runtime_get_sync(struct phy *phy)
 {
 	int ret;
 
-	if (!phy)
-		return 0;
-
 	if (!pm_runtime_enabled(&phy->dev))
 		return -ENOTSUPP;
 
@@ -187,9 +181,6 @@ EXPORT_SYMBOL_GPL(phy_pm_runtime_get_sync);
 
 int phy_pm_runtime_put(struct phy *phy)
 {
-	if (!phy)
-		return 0;
-
 	if (!pm_runtime_enabled(&phy->dev))
 		return -ENOTSUPP;
 
@@ -199,9 +190,6 @@ EXPORT_SYMBOL_GPL(phy_pm_runtime_put);
 
 int phy_pm_runtime_put_sync(struct phy *phy)
 {
-	if (!phy)
-		return 0;
-
 	if (!pm_runtime_enabled(&phy->dev))
 		return -ENOTSUPP;
 
@@ -211,9 +199,6 @@ EXPORT_SYMBOL_GPL(phy_pm_runtime_put_sync);
 
 void phy_pm_runtime_allow(struct phy *phy)
 {
-	if (!phy)
-		return;
-
 	if (!pm_runtime_enabled(&phy->dev))
 		return;
 
@@ -223,9 +208,6 @@ EXPORT_SYMBOL_GPL(phy_pm_runtime_allow);
 
 void phy_pm_runtime_forbid(struct phy *phy)
 {
-	if (!phy)
-		return;
-
 	if (!pm_runtime_enabled(&phy->dev))
 		return;
 
@@ -290,6 +272,101 @@ out:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(phy_exit);
+
+int phy_vendor_set(struct phy *phy, int is_enable, int is_cancel)
+{
+	int ret;
+
+	if (!phy || !phy->ops->vendor_set)
+		return 0;
+
+	ret = phy->ops->vendor_set(phy, is_enable, is_cancel);
+	if (ret < 0) {
+		dev_err(&phy->dev, "phy vendor setting failed --> %d\n", ret);
+	} else {
+		ret = 0; /* Override possible ret == -ENOTSUPP */
+	}
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_vendor_set);
+
+/* for checking USB cable type - USBPHY BC1.2 spec*/
+int phy_bc_check(struct phy *phy)
+{
+	int ret;
+
+	if (!phy || !phy->ops->bc_check)
+		return 0;
+
+	ret = phy->ops->bc_check(phy);
+	if (ret < 0) {
+		dev_err(&phy->dev, "phy battery charger check failed --> %d\n", ret);
+	} else {
+		ret = 0; /* Override possible ret == -ENOTSUPP */
+	}
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_bc_check);
+
+int phy_ilbk(struct phy *phy)
+{
+	int ret;
+
+	if (!phy || !phy->ops->ilbk)
+		return 0;
+
+	ret = phy->ops->ilbk(phy);
+	if (ret < 0)
+		dev_err(&phy->dev, "phy ilbk failed --> %d\n", ret);
+	else
+		ret = 0; /* Override possible ret == -ENOTSUPP */
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_ilbk);
+
+int phy_tune(struct phy *phy, int phy_state)
+{
+	int ret;
+
+	if (!phy || !phy->ops->tune)
+		return 0;
+
+	ret = phy->ops->tune(phy, phy_state);
+	if (ret < 0) {
+		dev_err(&phy->dev, "phy tune failed --> %d\n", ret);
+	} else {
+		ret = 0; /* Override possible ret == -ENOTSUPP */
+	}
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_tune);
+
+void phy_conn(struct phy *phy, int option)
+{
+	if (!phy || !phy->ops->conn)
+		return;
+
+	phy->ops->conn(phy, option);
+
+	return;
+}
+EXPORT_SYMBOL_GPL(phy_conn);
+
+int phy_set(struct phy *phy, int option, void *info)
+{
+	int ret;
+
+	if (!phy || !phy->ops->set)
+		return 0;
+
+	ret = phy->ops->set(phy, option, info);
+	if (ret < 0)
+		dev_err(&phy->dev, "phy set failed --> %d\n", ret);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_set);
 
 int phy_power_on(struct phy *phy)
 {
@@ -369,8 +446,6 @@ int phy_set_mode(struct phy *phy, enum phy_mode mode)
 
 	mutex_lock(&phy->mutex);
 	ret = phy->ops->set_mode(phy, mode);
-	if (!ret)
-		phy->attrs.mode = mode;
 	mutex_unlock(&phy->mutex);
 
 	return ret;
@@ -391,21 +466,6 @@ int phy_reset(struct phy *phy)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(phy_reset);
-
-int phy_calibrate(struct phy *phy)
-{
-	int ret;
-
-	if (!phy || !phy->ops->calibrate)
-		return 0;
-
-	mutex_lock(&phy->mutex);
-	ret = phy->ops->calibrate(phy);
-	mutex_unlock(&phy->mutex);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(phy_calibrate);
 
 /**
  * _of_phy_get() - lookup and obtain a reference to a phy by phandle
@@ -428,10 +488,6 @@ static struct phy *_of_phy_get(struct device_node *np, int index)
 	ret = of_parse_phandle_with_args(np, "phys", "#phy-cells",
 		index, &args);
 	if (ret)
-		return ERR_PTR(-ENODEV);
-
-	/* This phy type handled by the usb-phy subsystem for now */
-	if (of_device_is_compatible(args.np, "usb-nop-xceiv"))
 		return ERR_PTR(-ENODEV);
 
 	mutex_lock(&phy_provider_mutex);

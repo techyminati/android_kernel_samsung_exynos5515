@@ -756,4 +756,10 @@ config KEYBOARD_MTK_PMIC
 	  To compile this driver as a module, choose M here: the
 	  module will be called pmic-keys.
 
+config KEYBOARD_S2MPW03
+	tristate "Samsung Electronics S2MPW03 Powerkey Controller"
+	depends on I2C
+	depends on MFD_S2MPW03
+	select SEC_PMIC_PWRKEY
+
 endif

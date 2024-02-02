@@ -1215,6 +1215,12 @@ static int is_connected_output_ep(struct snd_soc_dapm_widget *widget,
 			is_connected_output_ep, custom_stop_condition);
 }
 
+int snd_soc_dapm_connected_output_ep(struct snd_soc_dapm_widget *widget,
+		struct list_head *list)
+{
+	return is_connected_output_ep(widget, list, NULL);
+}
+
 /*
  * Recursively check for a completed path to an active or physically connected
  * input widget. Returns number of complete paths.
@@ -1231,6 +1237,12 @@ static int is_connected_input_ep(struct snd_soc_dapm_widget *widget,
 {
 	return is_connected_ep(widget, list, SND_SOC_DAPM_DIR_IN,
 			is_connected_input_ep, custom_stop_condition);
+}
+
+int snd_soc_dapm_connected_input_ep(struct snd_soc_dapm_widget *widget,
+		struct list_head *list)
+{
+	return is_connected_input_ep(widget, list, NULL);
 }
 
 /**

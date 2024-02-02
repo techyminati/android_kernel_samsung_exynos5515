@@ -428,6 +428,14 @@ config SND_SOC_ALC5623
 config SND_SOC_ALC5632
 	tristate
 
+config SND_SOC_AUD9001X
+	tristate
+	default n
+
+config SND_SOC_COD9005X
+	tristate
+	default n
+
 config SND_SOC_BD28623
 	tristate "ROHM BD28623 CODEC"
 	help

@@ -535,8 +535,7 @@ static void synchronize_sched_expedited_wait(struct rcu_state *rsp)
 		WARN_ON(ret < 0);  /* workqueues should not be signaled. */
 		if (rcu_cpu_stall_suppress)
 			continue;
-		panic_on_rcu_stall();
-		pr_err("INFO: %s detected expedited stalls on CPUs/tasks: {",
+		pr_auto(ASL1, "INFO: %s detected expedited stalls on CPUs/tasks: {",
 		       rsp->name);
 		ndetected = 0;
 		rcu_for_each_leaf_node(rsp, rnp) {
@@ -580,6 +579,7 @@ static void synchronize_sched_expedited_wait(struct rcu_state *rsp)
 				dump_cpu_task(cpu);
 			}
 		}
+		panic_on_rcu_stall();
 		jiffies_stall = 3 * rcu_jiffies_till_stall_check() + 3;
 	}
 }

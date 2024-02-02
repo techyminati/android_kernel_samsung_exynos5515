@@ -58,6 +58,7 @@ obj-$(CONFIG_CHARGER_88PM860X)	+= 88pm860x_charger.o
 obj-$(CONFIG_CHARGER_PCF50633)	+= pcf50633-charger.o
 obj-$(CONFIG_BATTERY_JZ4740)	+= jz4740-battery.o
 obj-$(CONFIG_BATTERY_RX51)	+= rx51_battery.o
+obj-$(CONFIG_BATTERY_S2MU00X)	+= s2mu00x_battery.o
 obj-$(CONFIG_AB8500_BM)		+= ab8500_bmdata.o ab8500_charger.o ab8500_fg.o ab8500_btemp.o abx500_chargalg.o pm2301_charger.o
 obj-$(CONFIG_CHARGER_CPCAP)	+= cpcap-charger.o
 obj-$(CONFIG_CHARGER_ISP1704)	+= isp1704_charger.o
@@ -85,3 +86,8 @@ obj-$(CONFIG_CHARGER_TPS65217)	+= tps65217_charger.o
 obj-$(CONFIG_AXP288_FUEL_GAUGE) += axp288_fuel_gauge.o
 obj-$(CONFIG_AXP288_CHARGER)	+= axp288_charger.o
 obj-$(CONFIG_CHARGER_CROS_USBPD)	+= cros_usbpd-charger.o
+
+ifeq ($(CONFIG_BATTERY_SAMSUNG_V2), n)
+obj-$(CONFIG_CHARGER_S2MPW03)   += s2mpw03_charger.o
+obj-$(CONFIG_FUELGAUGE_S2MPW03)		+= s2mpw03_fuelgauge.o
+endif

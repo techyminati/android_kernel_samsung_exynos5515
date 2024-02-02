@@ -1,0 +1,137 @@
+/*
+ * SAMSUNG EXYNOS5515 board device tree source
+ *
+ * Copyright (c) 2017 Samsung Electronics Co., Ltd.
+ *              http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/dts-v1/;
+/plugin/;
+#include "exynos5515-wise_common.dtsi"
+#include "exynos5515-wise_common_gnss.dtsi"
+#include "exynos5515-wise_nfc_00.dtsi"
+#include "battery_data_wise_large_common.dtsi"
+#include "exynos5515-wisebl_pm_00.dtsi"
+#include "exynos5515-wise_large_input_common.dtsi"
+
+/ {
+	compatible = "samsung, WISEBL NA OPEN REV05", "samsung,exynos5515";
+	dtbo-hw_rev = <10>;
+	dtbo-hw_rev_end = <10>;
+
+	fragment@model {
+		target-path = "/";
+		__overlay__ {
+			#address-cells = <2>;
+			#size-cells = <1>;
+
+			model = "Samsung WISEBL NA OPEN REV05 based on EXYNOS5515";
+
+			memory@80000000 {
+				device_type = "memory";
+				reg = <0x0 0x80000000 0x3EE00000>;
+			};
+		}; /* end of __overlay__ */
+	}; /* end of fragment */
+}; /* end of root */
+
+&contexthub_0 {
+	ssp,chub-hw-rev = <1>;
+	ssp,model-num =  /bits/ 16 <890>;
+	/* SSP Sensor Position */
+	ssp,acc-position = <5>;
+	ssp,mag-position = <6>;
+	ssp-pdc = /bits/ 8 <173 103 33 57 12 246 0 216 201 55 97 23 235 40 8 87 248 76 73 210 190 18 59 142 9 30 245>;
+};
+
+/* ----------------------------------------------------------------------------
+ * Configurations for GPIOs without Device Driver
+ * Note: Do NOT add pins using by device drivers to the configuration below
+ * ----------------------------------------------------------------------------
+ */
+/*
+ * pin banks of exynos5515 pin-controller 0 (ALIVE) : pinctrl@12850000
+ * ETC0
+ * GPA0, GPA1
+ * GPQ0
+ * Note that do not set sleep state because this is an ALIVE region.
+ */
+/*
+&pinctrl_0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&initial0>;
+	initial0: initial-state {
+	};
+};
+*/
+
+/*
+ * pin banks of exynos5515 pin-controller 1 (CMGP) : pinctrl@12B30000
+ * GPM0 ~ 26
+ */
+&pinctrl_1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&initial1>;
+	initial1: initial-state {
+		PIN_IN(gpm26-0, NONE);			/* XCMGP_GPIO4_LB_IRQB */
+	};
+};
+
+/*
+ * pin banks of exynos5515 pin-controller 2 (DPU) : pinctrl@13A60000
+ * GPB0, GPB1
+ */
+/*
+&pinctrl_2 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&initial2>;
+        initial2: initial-state {
+        };  
+};
+*/
+
+/*
+ * pin banks of exynos5515 pin-controller 3 (FSYS) : pinctrl@10440000
+ * GPF0, GPF1, GPF2
+ */
+/*
+&pinctrl_3 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&initial3>;
+        initial3: initial-state {
+        };  
+};
+*/
+
+/*
+ * pin banks of exynos5515 pin-controller 4 (PERI) : pinctrl@10110000
+ * GPP0, GPP1, GPP2, GPP3, GPP4
+ * GPC0, GPC1
+ * GPG0, GPG1, GPG2, GPG3, GPG4, GPG5, GPG6, GPG7
+ */
+/*
+&pinctrl_4 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&initial4>;
+        initial4: initial-state {
+        };  
+};
+*/
+
+/*
+ * pin banks of exynos5515 pin-controller 5 (VTS) : pinctrl@11180000
+ * GPV0
+ */
+/*
+&pinctrl_5 {
+        pinctrl-names = "default";
+        pinctrl-0 = <&initial5>;
+        initial5: initial-state {
+        };  
+};
+*/
+

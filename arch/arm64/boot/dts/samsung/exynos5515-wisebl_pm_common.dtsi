@@ -1,0 +1,54 @@
+/*
+ * SAMSUNG EXYNOS5515 Power Management device tree source
+ *
+ * Copyright (c) 2021 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/ {
+	fragment@common {
+		target-path = "/";
+		__overlay__ {
+			secgpio_dvs {
+				compatible = "samsung,exynos5515-secgpio-dvs";
+				status = "okay";
+			};
+
+			sec_thermistor@0 {
+				compatible = "samsung,sec-thermistor";
+				status = "okay";
+				thermistor_name = "sec-ap-thermistor";
+				id = <0>;
+
+				adc_array = <66 111 172 245 358 519 682 929 1104
+							1289 1495 1735 2143 2633 3050 3416 3664>;
+				temp_array = <1200 1100 1000 900 800 700 600 500 450
+							400 350 300 200 100 0 (-100) (-200)>;
+
+				io-channels = <&exynos_adc 0>;
+				io-channel-names = "adc-ap-temp";
+				io-channel-ranges;
+			};
+
+			sec_thermistor@6 {
+				compatible = "samsung,sec-thermistor";
+				status = "okay";
+				thermistor_name = "sec-blk-thermistor";
+				id = <1>;
+
+				adc_array = <66 111 172 245 373 519 691 946 1123
+							1310 1515 1757 2153 2644 3056 3422 3686 3799 4000>;
+				temp_array = <1200 1100 1000 900 800 700 600 500 450
+							400 350 300 200 100 0 (-100) (-200) (-300) (-400)>;
+
+				io-channels = <&exynos_adc 6>;
+				io-channel-names = "adc-blk-temp";
+				io-channel-ranges;
+			};
+		}; /* end of __overlay__ */
+	}; /* end of fragment */
+}; /* end of root */

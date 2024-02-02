@@ -18,6 +18,7 @@
 #include <linux/pinctrl/pinconf.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/machine.h>
+#include <linux/regmap.h>
 
 #include <linux/gpio.h>
 
@@ -114,6 +115,7 @@ struct samsung_pin_bank_type {
  * @eint_type: type of the external interrupt supported by the bank.
  * @eint_mask: bit mask of pins which support EINT function.
  * @eint_offset: SoC-specific EINT register or interrupt offset of bank.
+ * @fltcon_offset: SoC-specific EINT filter control register offset of bank.
  * @name: name to be prefixed for each pin in this pin bank.
  */
 struct samsung_pin_bank_data {
@@ -125,7 +127,11 @@ struct samsung_pin_bank_data {
 	enum eint_type	eint_type;
 	u32		eint_mask;
 	u32		eint_offset;
+	u32		eint_num;
+	u32		fltcon_offset;
 	const char	*name;
+	unsigned int    sysreg_cmgp_offs;
+	unsigned int    sysreg_cmgp_bit;
 };
 
 /**
@@ -139,6 +145,7 @@ struct samsung_pin_bank_data {
  * @eint_type: type of the external interrupt supported by the bank.
  * @eint_mask: bit mask of pins which support EINT function.
  * @eint_offset: SoC-specific EINT register or interrupt offset of bank.
+ * @fltcon_offset: SoC-specific EINT filter control register offset of bank.
  * @name: name to be prefixed for each pin in this pin bank.
  * @pin_base: starting pin number of the bank.
  * @soc_priv: per-bank private data for SoC-specific code.
@@ -161,7 +168,11 @@ struct samsung_pin_bank {
 	enum eint_type	eint_type;
 	u32		eint_mask;
 	u32		eint_offset;
+	u32		eint_num;
+	u32		fltcon_offset;
 	const char	*name;
+	unsigned int    sysreg_cmgp_offs;
+	unsigned int    sysreg_cmgp_bit;
 
 	u32		pin_base;
 	void		*soc_priv;
@@ -287,6 +298,7 @@ struct samsung_pinctrl_drv_data {
 	unsigned int			nr_pins;
 
 	struct samsung_retention_ctrl	*retention_ctrl;
+	struct regmap   *sysreg_cmgp;
 
 	void (*suspend)(struct samsung_pinctrl_drv_data *);
 	void (*resume)(struct samsung_pinctrl_drv_data *);
@@ -339,6 +351,7 @@ extern const struct samsung_pinctrl_of_match_data exynos5410_of_data;
 extern const struct samsung_pinctrl_of_match_data exynos5420_of_data;
 extern const struct samsung_pinctrl_of_match_data exynos5433_of_data;
 extern const struct samsung_pinctrl_of_match_data exynos7_of_data;
+extern const struct samsung_pinctrl_of_match_data s5e5515_of_data;
 extern const struct samsung_pinctrl_of_match_data s3c64xx_of_data;
 extern const struct samsung_pinctrl_of_match_data s3c2412_of_data;
 extern const struct samsung_pinctrl_of_match_data s3c2416_of_data;

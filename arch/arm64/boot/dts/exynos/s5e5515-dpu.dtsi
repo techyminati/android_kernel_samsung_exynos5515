@@ -1,0 +1,207 @@
+/*
+ * SAMSUNG EXYNOS9830 SoC device tree source
+ *
+ * Copyright (c) 2014 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * SAMSUNG EXYNOS9830 SoC device nodes are listed in this file.
+ * EXYNOS based board files can include this file and provide
+ * values for board specfic bindings.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/s5e5515.h>
+#include <dt-bindings/display/exynos-display.h>
+#include <dt-bindings/clock/s5e5515.h>
+#include "s5e5515-pinctrl.dtsi"
+#include "s5e5515-display-lcd.dtsi"
+
+/ {
+	aliases {
+		panel0 = &panel_0;
+		dpp0 = &dpp_0;
+		dpp1 = &dpp_1;
+		dpp2 = &dpp_2;
+		dsim0 = &dsim_0;
+		decon0 = &decon_f;
+	};
+
+
+	dpp_0: dpp@0x138A4000 {	/* vg0 */
+		compatible = "samsung,exynos9-dpp";
+		#pb-id-cells = <3>;
+		/* DMA, DPP, DPU_DMA_COMMON */
+		reg = <0x0 0x138A4000 0x1000>, <0x0 0x138B4000 0x1000>, <0x0 0x138A0000 0x110>;
+		interrupts = <GIC_SPI INTREQ__DPU_DMA_VG IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__DPU_DPP_VG IRQ_TYPE_LEVEL_HIGH>;
+		/* IDMA[16]/FLIP[2]/BLOCK[1] */
+		attr = <0x50016>;
+		port = <0>;
+		/* HW restriction */
+		src_f_w = <16 65534 1>;
+		src_f_h = <16 8190 1>;
+		src_w = <16 4096 1>;
+		src_h = <16 4096 1>;
+		src_xy_align = <1 1>;
+
+		dst_f_w = <16 8190 1>;
+		dst_f_h = <16 8190 1>;
+		dst_w = <16 4096 1>;
+		dst_h = <16 4096 1>;
+		dst_xy_align = <1 1>;
+
+		blk_w = <4 4096 1>;
+		blk_h = <1 4096 1>;
+		blk_xy_align = <1 1>;
+
+		src_h_rot_max = <2160>;
+
+		scale_down = <1>;
+		scale_up = <1>;
+		/* supported format count */
+		fmt_cnt = <7>;
+		/* supported format list */
+		fmt = <DECON_PIXEL_FORMAT_RGB_565 DECON_PIXEL_FORMAT_BGR_565
+			DECON_PIXEL_FORMAT_NV12 DECON_PIXEL_FORMAT_NV21
+			DECON_PIXEL_FORMAT_NV12M DECON_PIXEL_FORMAT_NV21M
+			DECON_PIXEL_FORMAT_NV12N>;
+	};
+
+	dpp_1: dpp@0x138A1000 {	/* g0 */
+		compatible = "samsung,exynos9-dpp";
+		#pb-id-cells = <3>;
+		reg = <0x0 0x138A1000 0x1000>, <0x0 0x138B1000 0x1000>;
+		/* DPU_DMA IRQ, DPP IRQ */
+		interrupts = <GIC_SPI INTREQ__DPU_DMA_G0 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__DPU_DPP_G0 IRQ_TYPE_LEVEL_HIGH>;
+		/* Each bit indicates DPP attribute */
+		/* 0:AFBC 1:BLOCK 2:FLIP 3:ROT 4:CSC 5:SCALE 6:HDR 7:C_HDR 8:C_HDR10 9:WCG 10:SBWC */
+		/* 16:IDMA 17:ODMA 18:DPP */
+		/* DPP[18]/IDMA[16]/CSC[4]/FLIP[2]/BLOCK[1] */
+		attr = <0x10006>;
+		port = <0>; /* AXI port number */
+
+		/* 1: scale X, 2: 1/2x scale down, 4: 1/4x scale down */
+		scale_down = <1>;
+		/* 1: scale X, 2: 2x scale up, 4: 4x scale up */
+		scale_up = <1>;
+
+		fmt_cnt = <2>;
+		fmt = <DECON_PIXEL_FORMAT_RGB_565 DECON_PIXEL_FORMAT_BGR_565>;
+	};
+
+	dpp_2: dpp@0x138A2000 {	/* G1 */
+		compatible = "samsung,exynos9-dpp";
+		#pb-id-cells = <3>;
+		reg =  <0x0 0x138A2000 0x1000>, <0x0 0x138B2000 0x1000>;
+		interrupts = <GIC_SPI INTREQ__DPU_DMA_G1 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI INTREQ__DPU_DPP_G1 IRQ_TYPE_LEVEL_HIGH>;
+		/* IDMA[16]/FLIP[2]/BLOCK[1] */
+		attr = <0x10006>;
+		port = <0>;
+		scale_down = <1>;
+		scale_up = <1>;
+		fmt_cnt = <2>;
+		fmt = <DECON_PIXEL_FORMAT_RGB_565 DECON_PIXEL_FORMAT_BGR_565>;
+	};
+
+	disp_ss: disp_ss@0x13861000 {
+		compatible = "samsung,exynos9-disp_ss";
+		/* MIPI PHY CON : 0x13861000 */
+		reg = <0x0 0x13861000 0x10>;
+	};
+
+	mipi_phy_dsim0_m2s0: dphy_m2s0_dsim0@0x138E0000 {
+		compatible = "samsung,mipi-phy-m2s0";
+		samsung,pmu-syscon = <&pmu_system_controller>;
+		isolation = <0x0714>;
+		owner = <0>; /* 0: DSI_0 1: DSI_1 */
+		#phy-cells = <1>;
+	};
+
+	dsim_dphy_apb: dsim_dphy_apb@0x138E0000 {
+		compatible = "samsung,dphy-apb";
+	};
+
+	dsim_0: dsim@0x138D0000 {
+		compatible = "samsung,exynos9-dsim";
+		/* DSIM0, DPHY_M2S0 */
+		reg = <0x0 0x138D0000 0x200>, <0x0 0x138E0000 0x4000>;
+		interrupts = <GIC_SPI INTREQ__DPU_DSIM0 IRQ_TYPE_LEVEL_HIGH>;
+		iommus = <&sysmmu_dpu>;
+
+		/* clock */
+		clock-names = "aclk";
+		clocks = <&clock GATE_DPU_QCH_S_DECON>;
+
+		phys = <&mipi_phy_dsim0_m2s0 0>;
+		phy-names = "dsim_dphy";
+
+//		memory-region = <&fb_handover>;
+	};
+
+	panel_0: panel_0 {
+		compatible = "samsung,exynos-panel";
+		//ddi_id = <0x842440>;
+		ddi_id = <0x0>;
+		lcd_info = <&s6e36w4x01>;
+
+		/* reset, power */
+		gpios = <&gpg3 1 0x1>;
+	};
+
+	decon_f: decon_f@0x138C0000 {
+		compatible = "samsung,exynos9-decon";
+		#pb-id-cells = <4>;
+		reg = <0x0 0x138C0000 0x10000>;
+
+		/* interrupt num : FRAME_START, FRMAE_DONE, EXTRA, GPIO_PERIC1(EXT_INT_TE: GPA4[1] EINT33) */
+		interrupts = <GIC_SPI INTREQ__DPU_DECON0_FRAME_START IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI INTREQ__DPU_DECON0_FRAME_DONE IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI INTREQ__DPU_DECON0_EXTRA IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI INTREQ__GPIO_PERI IRQ_TYPE_LEVEL_HIGH>;
+		/* pinctrl */
+
+		pinctrl-names = "hw_te_on", "hw_te_off", "disp_rstn_ret_on", "disp_rstn_ret_off";
+		pinctrl-0 = <&decon_f_te_on>;
+		pinctrl-1 = <&decon_f_te_off>;
+		pinctrl-2 = <&disp_rstn_ret_on>;
+		pinctrl-3 = <&disp_rstn_ret_off>;
+
+		max_win = <3>;
+		default_win = <0>;
+		default_ch = <0>;
+		psr_mode = <2>;         /* 0: video mode, 1: DP command mode, 2: MIPI command mode */
+		trig_mode = <0>;        /* 0: hw trigger, 1: sw trigger */
+		dsi_mode = <0>;         /* 0: single dsi, 1: dual dsi */
+
+		/* 0: DSI, 1: eDP, 2:HDMI, 3: WB */
+		out_type = <0>;
+		/* 0: DSI0, 1: DSI1, 2: DSI2 */
+		out_idx = <0>;
+
+		/* pixel per clock */
+		ppc = <1>;
+		line_mem_cnt = <4>;	/* related to scale func */
+		cycle_per_line = <8>;   /* 4ppc */ /* related to rotate func */
+
+		chip_ver = <5515>;
+
+		dpp_cnt = <3>;
+		dsim_cnt = <1>;
+		decon_cnt = <1>;
+
+		#address-cells = <2>;
+		#size-cells = <1>;
+		ranges;
+
+		/* EINT for TE */
+		gpios = <&gpc1 0 0xf>;
+		/* sw te pending register */
+		te_eint {
+			/* NWEINT_GPC1_PEND */
+			reg = <0x0 0x10110A18 0x4>;
+		};
+	};
+};

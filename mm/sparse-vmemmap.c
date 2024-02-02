@@ -43,7 +43,7 @@ static void * __ref __earlyonly_bootmem_alloc(int node,
 				unsigned long goal)
 {
 	return memblock_virt_alloc_try_nid_raw(size, align, goal,
-					       BOOTMEM_ALLOC_ACCESSIBLE, node);
+					    BOOTMEM_ALLOC_ACCESSIBLE, node);
 }
 
 void * __meminit vmemmap_alloc_block(unsigned long size, int node)
@@ -181,7 +181,11 @@ pud_t * __meminit vmemmap_pud_populate(p4d_t *p4d, unsigned long addr, int node)
 {
 	pud_t *pud = pud_offset(p4d, addr);
 	if (pud_none(*pud)) {
+#ifdef CONFIG_RKP
+		void *p = rkp_ro_alloc();
+#else
 		void *p = vmemmap_alloc_block_zero(PAGE_SIZE, node);
+#endif
 		if (!p)
 			return NULL;
 		pud_populate(&init_mm, pud, p);

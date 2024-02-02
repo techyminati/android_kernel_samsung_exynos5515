@@ -30,6 +30,7 @@
 #include <linux/task_io_accounting.h>
 #include <linux/rseq.h>
 #include <linux/android_kabi.h>
+#include <linux/sec_debug_types.h>
 
 /* task_struct member predeclarations (sorted alphabetically): */
 struct audit_context;
@@ -1291,6 +1292,12 @@ struct task_struct {
 #ifdef CONFIG_SECURITY
 	/* Used by LSM modules for access restriction: */
 	void				*security;
+#endif
+#ifdef CONFIG_SEC_DEBUG_COMPLETE_HINT
+	struct completion               *x;
+#endif
+#ifdef CONFIG_SEC_DEBUG_DTASK
+	struct sec_debug_wait           ssdbg_wait;
 #endif
 	/* task is frozen/stopped (used by the cgroup freezer) */
 	ANDROID_KABI_USE(1, unsigned frozen:1);
